@@ -1,0 +1,28 @@
+language: cpp
+
+os: linux
+dist: xenial
+compiler: gcc
+
+env:
+  - CMAKE_ARGS="-DLLVM_TARGETS_TO_BUILD=ARM -DBUILD_RPI_SYSROOT=ON"
+
+install:
+
+  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+  - mkdir ${DEPS_DIR} && cd ${DEPS_DIR} && pwd
+
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then travis_retry wget --no-check-certificate https://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo "96d67e21f0983ebf0fffc5b106ec338c *cmake-3.11.0-Linux-x86_64.tar.gz" > cmake_md5.txt; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then md5sum -c cmake_md5.txt; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then tar -xvf cmake-3.11.0-Linux-x86_64.tar.gz > /dev/null; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then mv cmake-3.11.0-Linux-x86_64 cmake-install; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export PATH=${DEPS_DIR}/cmake-install:${DEPS_DIR}/cmake-install/bin:$PATH; fi
+
+before_script:
+  - cd ${TRAVIS_BUILD_DIR}
+  - mkdir build && cd build
+  - cmake .. ${CMAKE_ARGS}
+
+script:
+  - make -j`grep -c ^processor /proc/cpuinfo`
