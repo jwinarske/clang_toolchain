@@ -26,4 +26,5 @@ before_script:
 
 script:
   - export CPU_COUNT=`grep -c ^processor /proc/cpuinfo`
-  - travis_wait 45 make -j${CPU_COUNT}
+  - echo "CPU_COUNT=${CPU_COUNT}"
+  - make -j${CPU_COUNT}
