@@ -25,5 +25,5 @@ before_script:
   - cmake .. ${CMAKE_ARGS}
 
 script:
-  - export CPU_COUNT=grep -c ^processor /proc/cpuinfo
+  - export CPU_COUNT=`grep -c ^processor /proc/cpuinfo`
   - travis_wait 45 make -j${CPU_COUNT}
