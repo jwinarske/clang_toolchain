@@ -1,18 +1,28 @@
-cmake_minimum_required(VERSION 3.11)
+#
+# MIT License
+#
+# Copyright (c) 2018 Joel Winarske
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
 
-#if(POLICY CMP0068)
-  #cmake_policy(SET CMP0068 NEW)
-  #set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
-#endif()
-#if(POLICY CMP0075)
-  #cmake_policy(SET CMP0075 NEW)
-#endif()
-#if(POLICY CMP0051)
-  #cmake_policy(SET CMP0051 NEW)
-#endif()
-#if(POLICY CMP0075)
-  #cmake_policy(SET CMP0075 NEW)
-#endif()
+cmake_minimum_required(VERSION 3.11)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "MinSizeRel" CACHE STRING "Choose the type of build, options are: Debug, Release, or MinSizeRel." FORCE)
@@ -34,16 +44,21 @@ include (ExternalProject)
 message(STATUS "Generator .............. ${CMAKE_GENERATOR}")
 message(STATUS "Build Type ............. ${CMAKE_BUILD_TYPE}")
 
+include(build_options)
 
-option(BUILD_RPI_SYSROOT "Build Raspberry Pi sysroot" ON)
+#
+# sysroot
+#
 if(BUILD_RPI_SYSROOT)
     include(rpi.sysroot)
+    set(BUILD_SYSROOT BUILD_RPI_SYSROOT)
 endif()
 
 
 set(TOOLCHAIN_DIR ${CMAKE_SOURCE_DIR}/sdk/toolchain CACHE PATH "toolchain path")
 
-set(LLVM_CONFIG_PATH ${TOOLCHAIN_DIR}/bin/llvm-config)
+set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
+
 
 if(NOT TARGET_SYSROOT)
     set(TARGET_SYSROOT ${CMAKE_SOURCE_DIR}/sdk/sysroot)
@@ -53,8 +68,6 @@ if(NOT TARGET_TRIPLE)
     set(TARGET_TRIPLE arm-linux-gnueabihf)
 endif()
 
-set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
-set(LLVM_SRC_DIR ${THIRD_PARTY_DIR}/llvm)
 
 if(NOT LLVM_TARGETS_TO_BUILD)
     set(LLVM_TARGETS_TO_BUILD ARM) #|AArch64|X86)
@@ -68,18 +81,14 @@ if(NOT LLVM_VER_DIR)
     set(LLVM_VER_DIR 7.0.1)
 endif()
 
+set(LLVM_SRC_DIR ${THIRD_PARTY_DIR}/llvm)
+
+set(LLVM_CONFIG_PATH ${TOOLCHAIN_DIR}/bin/llvm-config)
+
 
 #
 # built for host
 #
-option(BUILD_LLD "Checkout and build LLVM Linker for host" ON)
-option(BUILD_BINUTILS "Download and build binutils for host" ON)
-option(BUILD_LLDB "Checkout and build LLVM Debugger for host" OFF)
-
-option(BUILD_COMPILER_RT "Checkout and build compiler-rt" ON)
-option(BUILD_LIBCXXABI "Checkout and build libcxxabi for target" ON)
-option(BUILD_LIBUNWIND "Checkout and build libunwind for  target" ON)
-option(BUILD_LIBCXX "Checkout and build libcxx for target" ON)
 
 set(LLVM_CHECKOUT
     cd ${THIRD_PARTY_DIR} &&
@@ -144,6 +153,7 @@ if(BUILD_BINUTILS)
             --enable-gold
             --enable-ld
             --enable-lto
+            --enable-64-bit-bfd
     )
     add_dependencies(binutils clang)
 endif()
@@ -187,7 +197,7 @@ if(BUILD_LIBCXXABI)
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
-            -DCMAKE_BUILD_TYPE=MinSizeRel
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
             -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
             -DLIBCXXABI_SYSROOT=${TARGET_SYSROOT}
@@ -218,7 +228,7 @@ if(BUILD_LIBUNWIND)
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
-            -DCMAKE_BUILD_TYPE=MinSizeRel
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
             -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
             -DLIBUNWIND_STANDALONE_BUILD=OFF
@@ -251,7 +261,7 @@ if(BUILD_LIBCXX)
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
-            -DCMAKE_BUILD_TYPE=MinSizeRel
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
             -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
             -DLIBCXX_STANDALONE_BUILD=OFF
@@ -270,10 +280,3 @@ if(BUILD_LIBCXX)
         add_dependencies(libcxx sysroot)
     endif()
 endif()
-
-
-#set(CXX_LIB_COPY_CMD 
-    #${CMAKE_COMMAND} -E copy ${TOOLCHAIN_DIR}/lib/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}.1.0 ${CMAKE_INSTALL_PREFIX}/lib/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}.1 &&
-    #${CMAKE_COMMAND} -E copy ${TOOLCHAIN_DIR}/lib/libc++abi${CMAKE_SHARED_LIBRARY_SUFFIX}.1.0 ${CMAKE_INSTALL_PREFIX}/lib/libc++abi${CMAKE_SHARED_LIBRARY_SUFFIX}.1 &&
-    #chmod +x ${CMAKE_INSTALL_PREFIX}/lib/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}.1 &&
-    #chmod +x ${CMAKE_INSTALL_PREFIX}/lib/libc++abi${CMAKE_SHARED_LIBRARY_SUFFIX}.1)
