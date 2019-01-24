@@ -8,7 +8,7 @@ Builds tested on Trusty, Xenial, and Bionic.
 
 ## Travis-CI
 
-Builds fail, due to log size exceeding max.
+[![Build Status](https://travis-ci.com/jwinarske/clang_toolchain.svg?branch=master)](https://travis-ci.com/jwinarske/clang_toolchain)
 
 ## Raspbian rootfs
 
