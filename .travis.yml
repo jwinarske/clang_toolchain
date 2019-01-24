@@ -29,4 +29,4 @@ before_script:
   - cmake .. ${CMAKE_ARGS} -GNinja
 
 script:
-  - autoninja
+  - ninja -j `grep -c ^processor /proc/cpuinfo`
