@@ -172,7 +172,7 @@ if(BUILD_COMPILER_RT)
             -DCOMPILER_RT_BUILD_LIBFUZZER=OFF
             -DCOMPILER_RT_BUILD_PROFILE=OFF
     )
-    add_dependencies(compiler-rt clang binutils)
+    add_dependencies(compiler-rt clang)
     if(BUILD_SYSROOT)
         add_dependencies(compiler-rt sysroot)
     endif()
@@ -200,7 +200,7 @@ if(BUILD_LIBCXXABI)
             -DLIBCXXABI_ENABLE_ASSERTIONS=ON
             -DLIBCXXABI_ENABLE_PEDANTIC=ON
     )
-    add_dependencies(libcxxabi clang binutils)
+    add_dependencies(libcxxabi clang)
     if(BUILD_COMPILER_RT)
         add_dependencies(libcxxabi compiler-rt)
     endif()
@@ -230,7 +230,7 @@ if(BUILD_LIBUNWIND)
             -DLIBUNWIND_ENABLE_SHARED=OFF
             -DLIBUNWIND_ENABLE_THREADS=ON
     )
-    add_dependencies(libunwind clang binutils)
+    add_dependencies(libunwind clang)
     if(BUILD_COMPILER_RT)
         add_dependencies(libunwind compiler-rt)
     endif()
