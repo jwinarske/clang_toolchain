@@ -5,7 +5,8 @@ dist: xenial
 compiler: gcc
 
 env:
-  - CMAKE_ARGS="-DLLVM_TARGETS_TO_BUILD=ARM -DBUILD_RPI_SYSROOT=ON"
+
+  - CMAKE_ARGS="-DLLVM_TARGETS_TO_BUILD=ARM -DBUILD_BINUTILS=OFF"
 
 install:
 
@@ -25,6 +26,4 @@ before_script:
   - cmake .. ${CMAKE_ARGS}
 
 script:
-  - export CPU_COUNT=`grep -c ^processor /proc/cpuinfo`
-  - echo "CPU_COUNT=${CPU_COUNT}"
-  - make -j${CPU_COUNT}
+  - make -j`grep -c ^processor /proc/cpuinfo`

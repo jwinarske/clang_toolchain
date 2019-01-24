@@ -1,18 +1,18 @@
 cmake_minimum_required(VERSION 3.11)
 
-if(POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)
-  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
-endif()
-if(POLICY CMP0075)
-  cmake_policy(SET CMP0075 NEW)
-endif()
-if(POLICY CMP0051)
-  cmake_policy(SET CMP0051 NEW)
-endif()
-if(POLICY CMP0075)
-  cmake_policy(SET CMP0075 NEW)
-endif()
+#if(POLICY CMP0068)
+  #cmake_policy(SET CMP0068 NEW)
+  #set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
+#endif()
+#if(POLICY CMP0075)
+  #cmake_policy(SET CMP0075 NEW)
+#endif()
+#if(POLICY CMP0051)
+  #cmake_policy(SET CMP0051 NEW)
+#endif()
+#if(POLICY CMP0075)
+  #cmake_policy(SET CMP0075 NEW)
+#endif()
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "MinSizeRel" CACHE STRING "Choose the type of build, options are: Debug, Release, or MinSizeRel." FORCE)
@@ -29,45 +29,43 @@ set(CLANG_TOOLCHAIN_VERSION 1.0.${BUILD_NUMBER})
 set(PACKAGE_NAME clang-toolchain)
 project(${PACKAGE_NAME} VERSION "${CLANG_TOOLCHAIN_VERSION}" LANGUAGES CXX C)
 
+include (ExternalProject)
+
 message(STATUS "Generator .............. ${CMAKE_GENERATOR}")
 message(STATUS "Build Type ............. ${CMAKE_BUILD_TYPE}")
 
 
-option(BUILD_RPI_SYSROOT "Build Raspberry Pi sysroot" OFF)
+option(BUILD_RPI_SYSROOT "Build Raspberry Pi sysroot" ON)
 if(BUILD_RPI_SYSROOT)
     include(rpi.sysroot)
 endif()
 
 
-include (ExternalProject)
+set(TOOLCHAIN_DIR ${CMAKE_SOURCE_DIR}/sdk/toolchain CACHE PATH "toolchain path")
 
-if(NOT ANDROID)
+set(LLVM_CONFIG_PATH ${TOOLCHAIN_DIR}/bin/llvm-config)
 
-    if(NOT TOOLCHAIN_DIR)
-        set(TOOLCHAIN_DIR ${CMAKE_SOURCE_DIR}/sdk/toolchain)
-    endif()
+if(NOT TARGET_SYSROOT)
+    set(TARGET_SYSROOT ${CMAKE_SOURCE_DIR}/sdk/sysroot)
+endif()
 
-    set(LLVM_CONFIG_PATH ${TOOLCHAIN_DIR}/bin/llvm-config CACHE PATH "llvm-config path")
-
-    if(NOT TARGET_SYSROOT)
-        set(TARGET_SYSROOT ${CMAKE_SOURCE_DIR}/sdk/sysroot)
-    endif()
-
-    if(NOT TARGET_TRIPLE)
-        set(TARGET_TRIPLE arm-linux-gnueabihf)
-    endif()
-
+if(NOT TARGET_TRIPLE)
+    set(TARGET_TRIPLE arm-linux-gnueabihf)
 endif()
 
 set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
 set(LLVM_SRC_DIR ${THIRD_PARTY_DIR}/llvm)
 
 if(NOT LLVM_TARGETS_TO_BUILD)
-    set(LLVM_TARGETS_TO_BUILD ARM|AArch64|X86)
+    set(LLVM_TARGETS_TO_BUILD ARM) #|AArch64|X86)
 endif()
 
 if(NOT LLVM_VERSION)
     set(LLVM_VERSION tags/RELEASE_701/final/)
+endif()
+
+if(NOT LLVM_VER_DIR)
+    set(LLVM_VER_DIR 7.0.1)
 endif()
 
 
@@ -78,11 +76,23 @@ option(BUILD_LLD "Checkout and build LLVM Linker for host" ON)
 option(BUILD_BINUTILS "Download and build binutils for host" ON)
 option(BUILD_LLDB "Checkout and build LLVM Debugger for host" OFF)
 
+option(BUILD_COMPILER_RT "Checkout and build compiler-rt" ON)
+option(BUILD_LIBCXXABI "Checkout and build libcxxabi for target" ON)
+option(BUILD_LIBUNWIND "Checkout and build libunwind for  target" ON)
+option(BUILD_LIBCXX "Checkout and build libcxx for target" ON)
+
 set(LLVM_CHECKOUT
     cd ${THIRD_PARTY_DIR} &&
     svn co -q http://llvm.org/svn/llvm-project/llvm/${LLVM_VERSION} llvm &&
     cd ${LLVM_SRC_DIR}/tools &&
     svn co -q http://llvm.org/svn/llvm-project/cfe/${LLVM_VERSION} clang)
+
+if(BUILD_LLD)
+    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${LLVM_SRC_DIR}/tools &&
+        svn co -q http://llvm.org/svn/llvm-project/lld/${LLVM_VERSION} lld)
+else()
+    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${LLVM_SRC_DIR}/tools && rm -rf lld)
+endif()
 
 if(BUILD_LLDB)
     set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${LLVM_SRC_DIR}/tools &&
@@ -91,48 +101,15 @@ else()
     set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${LLVM_SRC_DIR}/tools && rm -rf lldb)
 endif()
 
-if(BUILD_LLD)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${LLVM_SRC_DIR}/projects &&
-        svn co -q http://llvm.org/svn/llvm-project/lld/${LLVM_VERSION} lld)
-else()
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${LLVM_SRC_DIR}/projects && rm -rf lld)
-endif()
-
-#
-# built for target
-#
-option(BUILD_COMPILER_RT "Checkout and build compiler-rt" ON)
-option(BUILD_LIBCXXABI "Checkout and build libcxxabi for target" ON)
-option(BUILD_LIBUNWIND "Checkout and build libunwind for  target" ON)
-option(BUILD_LIBCXX "Checkout and build libcxx for target" ON)
-
-if(BUILD_COMPILER_RT)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} &&
-        cd ${THIRD_PARTY_DIR} &&
-        svn co -q http://llvm.org/svn/llvm-project/compiler-rt/${LLVM_VERSION} compiler-rt)
-else()
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} && rm -rf compiler-rt)
-endif()
-
-if(BUILD_LIBUNWIND)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} &&
-        cd ${THIRD_PARTY_DIR} &&
-        svn co -q http://llvm.org/svn/llvm-project/libunwind/${LLVM_VERSION} libunwind)
-else()
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} && rm -rf libunwind)
-endif()
-
 if(BUILD_LIBCXXABI)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && 
-        cd ${THIRD_PARTY_DIR} &&
+    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
         svn co -q http://llvm.org/svn/llvm-project/libcxxabi/${LLVM_VERSION} libcxxabi)
 else()
     set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} && rm -rf libcxxabi)
 endif()
 
 if(BUILD_LIBCXX)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} &&
-        cd ${THIRD_PARTY_DIR} &&
+    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
         svn co -q http://llvm.org/svn/llvm-project/libcxx/${LLVM_VERSION} libcxx)
 else()
     set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} && rm -rf libcxx)
@@ -152,7 +129,6 @@ ExternalProject_Add(clang
         -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
         -DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD}
         -DLLVM_ENABLE_ASSERTIONS=ON
-        -DLIBCXX_INSTALL_LIBRARY=OFF
 )
 
 if(BUILD_BINUTILS)
@@ -180,22 +156,21 @@ configure_file(cmake/clang.toolchain.cmake.in ${CMAKE_BINARY_DIR}/toolchain.cmak
 
 if(BUILD_COMPILER_RT)
     ExternalProject_Add(compiler-rt
-        DOWNLOAD_COMMAND ""
-        PATCH_COMMAND cd ${LLVM_SRC_DIR}/projects/compiler-rt && 
-            svn revert cmake/config-ix.cmake && svn patch ${CMAKE_SOURCE_DIR}/cmake/patches/compiler-rt.patch
+        SVN_REPOSITORY http://llvm.org/svn/llvm-project/compiler-rt/${LLVM_VERSION}
+        SOURCE_DIR ${THIRD_PARTY_DIR}/compiler-rt
         BUILD_IN_SOURCE 0
-        UPDATE_COMMAND ""
-        CONFIGURE_COMMAND ${CMAKE_COMMAND} ${LLVM_SRC_DIR}/projects/compiler-rt
+        CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/9.0.0
+            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}
             -DCMAKE_BUILD_TYPE=MinSizeRel
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-            -DLLVM_CONFIG_PATH=${LLVM_CONFIG_PATH}
-            -DCOMPILER_RT_STANDALONE_BUILD=OFF
-            -DCOMPILER_RT_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
+            -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
             -DCOMPILER_RT_HAS_FPIC_FLAG=ON
-            -DCOMPILER_RT_BUILD_XRAY=ON
+            -DCOMPILER_RT_BUILD_BUILTINS=ON
             -DCOMPILER_RT_BUILD_SANITIZERS=ON
+            -DCOMPILER_RT_BUILD_XRAY=ON
+            -DCOMPILER_RT_BUILD_LIBFUZZER=OFF
+            -DCOMPILER_RT_BUILD_PROFILE=OFF
     )
     add_dependencies(compiler-rt clang binutils)
     if(BUILD_SYSROOT)
@@ -204,19 +179,17 @@ if(BUILD_COMPILER_RT)
 endif()
 
 if(BUILD_LIBCXXABI)
-    configure_file(cmake/patches/libcxxabi.patch.in ${CMAKE_BINARY_DIR}/libcxxabi.patch @ONLY)
     ExternalProject_Add(libcxxabi
         DOWNLOAD_COMMAND ""
-        PATCH_COMMAND cd ${LLVM_SRC_DIR}/projects/libcxxabi && 
-            svn revert cmake/config-ix.cmake && svn patch ${CMAKE_BINARY_DIR}/libcxxabi.patch
+        SOURCE_DIR ${THIRD_PARTY_DIR}/libcxxabi
         BUILD_IN_SOURCE 0
         UPDATE_COMMAND ""
-        CONFIGURE_COMMAND ${CMAKE_COMMAND} ${LLVM_SRC_DIR}/projects/libcxxabi
+        CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
             -DCMAKE_BUILD_TYPE=MinSizeRel
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-            -DLLVM_CONFIG_PATH=${LLVM_CONFIG_PATH}
+            -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
             -DLIBCXXABI_SYSROOT=${TARGET_SYSROOT}
             -DLIBCXXABI_TARGET_TRIPLE=${TARGET_TRIPLE}
             -DLIBCXXABI_ENABLE_SHARED=ON
@@ -238,15 +211,16 @@ endif()
 
 if(BUILD_LIBUNWIND)
     ExternalProject_Add(libunwind
-        DOWNLOAD_COMMAND ""
+        SVN_REPOSITORY http://llvm.org/svn/llvm-project/libunwind/${LLVM_VERSION}
+        SOURCE_DIR ${THIRD_PARTY_DIR}/libunwind
         BUILD_IN_SOURCE 0
         UPDATE_COMMAND ""
-        CONFIGURE_COMMAND ${CMAKE_COMMAND} ${CMAKE_BINARY_DIR}/libunwind
+        CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
             -DCMAKE_BUILD_TYPE=MinSizeRel
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-            -DLLVM_CONFIG_PATH=${LLVM_CONFIG_PATH}
+            -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
             -DLIBUNWIND_STANDALONE_BUILD=OFF
             -DLIBUNWIND_TARGET_TRIPLE=${TARGET_TRIPLE}
             -DLIBUNWIND_SYSROOT=${TARGET_SYSROOT}
@@ -271,16 +245,15 @@ endif()
 if(BUILD_LIBCXX)
     ExternalProject_Add(libcxx
         DOWNLOAD_COMMAND ""
-        PATCH_COMMAND cd ${LLVM_SRC_DIR}/projects/libcxx && 
-            svn revert cmake/config-ix.cmake && svn patch ${CMAKE_SOURCE_DIR}/cmake/patches/libcxx.patch
+        SOURCE_DIR ${THIRD_PARTY_DIR}/libcxx
         BUILD_IN_SOURCE 0
         UPDATE_COMMAND ""
-        CONFIGURE_COMMAND ${CMAKE_COMMAND} ${LLVM_SRC_DIR}/projects/libcxx
+        CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
             -DCMAKE_BUILD_TYPE=MinSizeRel
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-            -DLLVM_CONFIG_PATH=${LLVM_CONFIG_PATH}
+            -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
             -DLIBCXX_STANDALONE_BUILD=OFF
             -DLIBCXX_SYSROOT=${TARGET_SYSROOT}
             -DLIBCXX_TARGET_TRIPLE=${TARGET_TRIPLE}
@@ -295,12 +268,12 @@ if(BUILD_LIBCXX)
     endif()
     if(BUILD_SYSROOT)
         add_dependencies(libcxx sysroot)
-    endif()        
+    endif()
 endif()
 
 
-set(CXX_LIB_COPY_CMD 
-    ${CMAKE_COMMAND} -E copy ${TOOLCHAIN_DIR}/lib/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}.1.0 ${CMAKE_INSTALL_PREFIX}/lib/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}.1 &&
-    ${CMAKE_COMMAND} -E copy ${TOOLCHAIN_DIR}/lib/libc++abi${CMAKE_SHARED_LIBRARY_SUFFIX}.1.0 ${CMAKE_INSTALL_PREFIX}/lib/libc++abi${CMAKE_SHARED_LIBRARY_SUFFIX}.1 &&
-    chmod +x ${CMAKE_INSTALL_PREFIX}/lib/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}.1 &&
-    chmod +x ${CMAKE_INSTALL_PREFIX}/lib/libc++abi${CMAKE_SHARED_LIBRARY_SUFFIX}.1)
+#set(CXX_LIB_COPY_CMD 
+    #${CMAKE_COMMAND} -E copy ${TOOLCHAIN_DIR}/lib/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}.1.0 ${CMAKE_INSTALL_PREFIX}/lib/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}.1 &&
+    #${CMAKE_COMMAND} -E copy ${TOOLCHAIN_DIR}/lib/libc++abi${CMAKE_SHARED_LIBRARY_SUFFIX}.1.0 ${CMAKE_INSTALL_PREFIX}/lib/libc++abi${CMAKE_SHARED_LIBRARY_SUFFIX}.1 &&
+    #chmod +x ${CMAKE_INSTALL_PREFIX}/lib/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}.1 &&
+    #chmod +x ${CMAKE_INSTALL_PREFIX}/lib/libc++abi${CMAKE_SHARED_LIBRARY_SUFFIX}.1)
