@@ -2,7 +2,7 @@
 option(BUILD_RPI_SYSROOT "Build Raspberry Pi sysroot" ON)
 
 option(BUILD_LLD "Checkout and build LLVM Linker for host" ON)
-option(BUILD_BINUTILS "Download and build binutils for host" ON)
+option(BUILD_BINUTILS "Download and build binutils for host" OFF)
 option(BUILD_LLDB "Checkout and build LLVM Debugger for host" OFF)
 
 option(BUILD_COMPILER_RT "Checkout and build compiler-rt" ON)

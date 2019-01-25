@@ -54,20 +54,21 @@ if(BUILD_RPI_SYSROOT)
     set(BUILD_SYSROOT BUILD_RPI_SYSROOT)
 endif()
 
+if(NOT THIRD_PARTY_DIR)
+    set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
+endif()
 
-set(TOOLCHAIN_DIR ${CMAKE_SOURCE_DIR}/sdk/toolchain CACHE PATH "toolchain path")
-
-set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
-
+if(NOT TOOLCHAIN_DIR)
+    set(TOOLCHAIN_DIR ${CMAKE_INSTALL_PREFIX}/sdk/toolchain)
+endif()
 
 if(NOT TARGET_SYSROOT)
-    set(TARGET_SYSROOT ${CMAKE_SOURCE_DIR}/sdk/sysroot)
+    set(TARGET_SYSROOT ${CMAKE_INSTALL_PREFIX}/sdk/sysroot)
 endif()
 
 if(NOT TARGET_TRIPLE)
     set(TARGET_TRIPLE arm-linux-gnueabihf)
 endif()
-
 
 if(NOT LLVM_TARGETS_TO_BUILD)
     set(LLVM_TARGETS_TO_BUILD ARM) #|AArch64|X86)
