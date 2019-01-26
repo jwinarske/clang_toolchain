@@ -2,7 +2,7 @@ language: cpp
 
 os: linux
 dist: xenial
-compiler: clang
+compiler: gcc
 
 env:
 
