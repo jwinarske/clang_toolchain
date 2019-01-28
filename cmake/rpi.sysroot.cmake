@@ -26,7 +26,7 @@ include(ExternalProject)
 
 find_program(ln REQUIRED)
 find_program(tar REQUIRED)
-find_program(wget REQUIRED)
+find_program(curl REQUIRED)
 
 if(NOT TARGET_SYSROOT)
     set(TARGET_SYSROOT ${CMAKE_SOURCE_DIR}/sdk/sysroot)
@@ -40,7 +40,7 @@ set(ROOT_ARCHIVE root.tar.xz)
 set(ROOT_ARCHIVE_PATH ${CMAKE_BINARY_DIR}/sysroot-prefix/src/${ROOT_ARCHIVE})
 
 ExternalProject_Add(sysroot
-    DOWNLOAD_COMMAND wget -nv https://downloads.raspberrypi.org/raspbian/archive/${RASPBIAN_ROOTFS_VERSION}/${ROOT_ARCHIVE}
+    DOWNLOAD_COMMAND curl http://director.downloads.raspberrypi.org/raspbian/archive/${RASPBIAN_ROOTFS_VERSION}/${ROOT_ARCHIVE} -s -o ${ROOT_ARCHIVE} 
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""

@@ -54,16 +54,20 @@ if(BUILD_RPI_SYSROOT)
     set(BUILD_SYSROOT BUILD_RPI_SYSROOT)
 endif()
 
+if(NOT CMAKE_INSTALL_PREFIX)
+    set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR} CACHE PATH "SDK root")
+endif()
+
 if(NOT THIRD_PARTY_DIR)
-    set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
+    set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party CACHE PATH "Third party dir")
 endif()
 
 if(NOT TOOLCHAIN_DIR)
-    set(TOOLCHAIN_DIR ${CMAKE_INSTALL_PREFIX}/sdk/toolchain)
+    set(TOOLCHAIN_DIR ${CMAKE_INSTALL_PREFIX}/sdk/toolchain CACHE PATH "Toolchain Dir")
 endif()
 
 if(NOT TARGET_SYSROOT)
-    set(TARGET_SYSROOT ${CMAKE_INSTALL_PREFIX}/sdk/sysroot)
+    set(TARGET_SYSROOT ${CMAKE_INSTALL_PREFIX}/sdk/sysroot CACHE PATH "Sysroot Dir")
 endif()
 
 if(NOT TARGET_TRIPLE)
@@ -170,6 +174,7 @@ if(BUILD_COMPILER_RT)
         SVN_REPOSITORY http://llvm.org/svn/llvm-project/compiler-rt/${LLVM_VERSION}
         SOURCE_DIR ${THIRD_PARTY_DIR}/compiler-rt
         BUILD_IN_SOURCE 0
+        UODATE_COMMAND ""
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}
