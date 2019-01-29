@@ -47,9 +47,9 @@ ExternalProject_Add(sysroot
     INSTALL_COMMAND
       ${CMAKE_COMMAND} -E make_directory ${TARGET_SYSROOT} && 
       cd ${TARGET_SYSROOT} &&
-      tar -xf ${ROOT_ARCHIVE_PATH} ./opt/vc/ 2>&1 >/dev/null &&
-      tar -xf ${ROOT_ARCHIVE_PATH} ./lib/ 2>&1 >/dev/null &&
-      tar -xf ${ROOT_ARCHIVE_PATH} ./usr/ 2>&1 >/dev/null &&
+      tar -xvf ${ROOT_ARCHIVE_PATH} ./opt/vc/ &&
+      tar -xvf ${ROOT_ARCHIVE_PATH} ./lib/ &&
+      tar -xvf ${ROOT_ARCHIVE_PATH} ./usr/ &&
       # dangling symlinks
       cd ./usr/lib/arm-linux-gnueabihf &&
       ln -f -s ../../../lib/arm-linux-gnueabihf/libz.so.1.2.8 libdl.so &&
