@@ -46,28 +46,20 @@ message(STATUS "Build Type ............. ${CMAKE_BUILD_TYPE}")
 
 include(build_options)
 
-#
-# sysroot
-#
-if(BUILD_RPI_SYSROOT)
-    include(rpi.sysroot)
-    set(BUILD_SYSROOT BUILD_RPI_SYSROOT)
-endif()
-
-if(NOT CMAKE_INSTALL_PREFIX)
-    set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR} CACHE PATH "SDK root")
-endif()
-
 if(NOT THIRD_PARTY_DIR)
     set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party CACHE PATH "Third party dir")
 endif()
 
+if(NOT SDK_ROOT_DIR)
+    set(SDK_ROOT_DIR ${CMAKE_SOURCE_DIR})
+endif()
+
 if(NOT TOOLCHAIN_DIR)
-    set(TOOLCHAIN_DIR ${CMAKE_INSTALL_PREFIX}/sdk/toolchain CACHE PATH "Toolchain Dir")
+    set(TOOLCHAIN_DIR ${SDK_ROOT_DIR}/sdk/toolchain CACHE PATH "Toolchain Dir")
 endif()
 
 if(NOT TARGET_SYSROOT)
-    set(TARGET_SYSROOT ${CMAKE_INSTALL_PREFIX}/sdk/sysroot CACHE PATH "Sysroot Dir")
+    set(TARGET_SYSROOT ${SDK_ROOT_DIR}/sdk/sysroot CACHE PATH "Sysroot Dir")
 endif()
 
 if(NOT TARGET_TRIPLE)
@@ -75,7 +67,7 @@ if(NOT TARGET_TRIPLE)
 endif()
 
 if(NOT LLVM_TARGETS_TO_BUILD)
-    set(LLVM_TARGETS_TO_BUILD ARM) #|AArch64|X86)
+    set(LLVM_TARGETS_TO_BUILD ARM)
 endif()
 
 if(NOT LLVM_VERSION)
@@ -89,6 +81,14 @@ endif()
 set(LLVM_SRC_DIR ${THIRD_PARTY_DIR}/llvm)
 
 set(LLVM_CONFIG_PATH ${TOOLCHAIN_DIR}/bin/llvm-config)
+
+#
+# sysroot
+#
+if(BUILD_RPI_SYSROOT)
+    include(rpi.sysroot)
+    set(BUILD_SYSROOT BUILD_RPI_SYSROOT)
+endif()
 
 
 #

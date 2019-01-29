@@ -1,34 +1,118 @@
 # clang_toolchain
 
-This repo is used to build a Clang toolchain, sysroot, libcxxabi, and libcxx.  The default sysroot created is the latest Raspbian rootfs.  The default triple is arm-linux-gnueabihf.  These defaults are overridable, for use with other sysroots, such as a Yocto SDK.
+This repo is used to build a Clang toolchain, sysroot, compiler-rt, libcxxabi, and libcxx.
+
+The default sysroot created is the latest Raspbian rootfs.
+
+The default triple is arm-linux-gnueabihf.
+
+These defaults are overridable, for use with other sysroots, such as a Yocto SDK.
 
 # Project Status
 
-Builds tested on Trusty, Xenial, and Bionic.
+Tested with GCC (Trusty, Xenial, and Bionic), and Clang (macOS Mojave).  Sysroot install step will fail on Windows native, should work on Cygwin or Mingw.
 
 ## Travis-CI
 
 [![Build Status](https://travis-ci.com/jwinarske/clang_toolchain.svg?branch=master)](https://travis-ci.com/jwinarske/clang_toolchain)
 
-Note:  If you don't have a commercial account, your travis build will fail due to the build time exceeding max.
+Note:  If you don't have a commercial account, your travis build will fail due to the build time exceeding max.  If you *do* have a commercial account, you will need to request a max build time setting of 180 minutes.
 
-## Raspbian rootfs
-
-The rootfs used is https://downloads.raspberrypi.org/raspbian/archive/2018-11-15-21:02/root.tar.xz
-
-This can be overriden with
-
-    -DRASPBIAN_ROOTFS_VERSION=2018-10-11-11:37
-
-Note: When you override with a different version there may/will be other symlinks that need fixing up.
-
-# Pre-requisites
+# Build Prerequisites
 
 1. CMake 3.11 or greater
 
-## Build Reference
+2. Host capable of building something
 
-    .travis.yml
+        sudo apt-get update
+        sudo apt-get install build-essential
+
+    Alternatively install LLVM/Clang
+
+3.  sysroot generation uses ln, tar, and curl
+
+## Build Example
+
+    git clone https://github.com/jwinarske/clang_toolchain.git
+    mkdir build && cd build
+    cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/../
+    make -j8
+
+## CMake Build options
+
+#### BUILD_RPI_SYSROOT
+Build Raspberry Pi sysroot.  Defaults to ON
+
+#### BUILD_LLD
+Checkout and build LLVM Linker for host.  Defaults to ON
+
+#### BUILD_BINUTILS
+Download and build binutils for host.  Defaults to OFF
+
+#### BUILD_LLDB
+Checkout and build LLVM Debugger for host.  Defaults to OFF.  Enables use of -fuse-ld=gold
+
+#### BUILD_COMPILER_RT
+Checkout and build compiler-rt.  Defaults to ON
+
+#### BUILD_LIBCXXABI
+Checkout and build libcxxabi for target.  Defaults to ON
+
+#### BUILD_LIBUNWIND
+Checkout and build libunwind for  target.  Defaults to ON
+
+#### BUILD_LIBCXX
+Checkout and build libcxx for target.  Defaults to ON
+
+## CMake variables
+
+#### RASPBIAN_ROOTFS_VERSION
+Defaults to 2018-11-15-21:02
+
+Note: When changing this you may need to adjust dangling/missing symlinks specific to selected version.  See cmake/rpi.sysroot.cmake
+
+#### THIRD_PARTY_DIR
+Defaults to ${CMAKE_SOURCE_DIR}/third_party
+
+#### SDK_ROOT_DIR
+Defaults to ${CMAKE_SOURCE_DIR}
+
+#### TOOLCHAIN_DIR
+Defaults to ${SDK_ROOT_DIR}/sdk/toolchain
+
+#### TARGET_SYSROOT
+Defaults to ${SDK_ROOT_DIR}/sdk/sysroot
+
+#### TARGET_TRIPLE
+Defaults to arm-linux-gnueabihf
+
+#### CMAKE_VERBOSE_MAKEFILE
+Defaults to OFF.  This variable affects all subprojects.  Alternatively use: 
+
+    make VERBOSE=1
+
+#### LLVM_TARGETS_TO_BUILD
+Defaults to ARM.  One example setting would be
+
+    -DLLVM_TARGETS_TO_BUILD=ARM|AArch64|X86
+
+Note: This only affects LLVM/Clang (host), not target builds; compiler-rt, libunwind, libcxxabi, and libcxx.
+
+Regardless of this value, the LLVM/Clang build as a minimum will build support for the host triple.
+
+#### LLVM_VERSION
+Defaults to tags/RELEASE_701/final/
+
+Some examples
+
+    -DLLVM_VERSION=trunk/
+    -DLLVM_VERSION=tags/RELEASE_800/rc1/
+    -DLLVM_VERSION=branches/release_80/
+
+Note: LLVM_VER_DIR needs to match selected version, in order for compiler-rt to install into the proper location.
+
+#### LLVM_VER_DIR
+Defaults to 7.0.1.  This must match LLVM version, or use of compiler-rt will fail, as library will not be found.  This variable is only used for installation of compiler-rt libraries.
 
 ## Target Triple (1)
 
@@ -43,16 +127,6 @@ The triple has the general format `<arch><sub>-<vendor>-<sys>-<abi>`, where:
 The sub-architecture options are available for their own architectures, of course, so "x86v7a" doesn’t make sense. The vendor needs to be specified only if there’s a relevant change, for instance between PC and Apple. Most of the time it can be omitted (and Unknown) will be assumed, which sets the defaults for the specified architecture. The system name is generally the OS (linux, darwin), but could be special like the bare-metal “none”.
 
 When a parameter is not important, it can be omitted, or you can choose unknown and the defaults will be used. If you choose a parameter that Clang doesn’t know, like blerg, it’ll ignore and assume unknown, which is not always desired, so be careful.
-
-## LLVM_TARGETS_TO_BUILD ARM
-
-This is a list seperated by the pipe symbol '|'.  The default value is 'ARM'.
-
-This variable setting would build LLVM/Clang that could cross-compile for machine types ARM, AArch64, x86:
-
-    -DLLVM_TARGETS_TO_BUILD=ARM|AArch64|X86
-
-LLVM by default always supports the host config.
 
 # References
 (1) https://clang.llvm.org/docs/CrossCompilation.html

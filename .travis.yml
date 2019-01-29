@@ -5,8 +5,7 @@ dist: xenial
 compiler: gcc
 
 env:
-
-  - CMAKE_ARGS="-DLLVM_TARGETS_TO_BUILD=ARM -DCMAKE_INSTALL_PREFIX=`pwd`"
+  - CMAKE_ARGS=""
 
 install:
 
