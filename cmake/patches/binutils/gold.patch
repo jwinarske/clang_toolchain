@@ -1,0 +1,14 @@
+diff --git a/gold/gold-threads.cc b/gold/gold-threads.cc
+index 3c53dff1d..94491cb07 100644
+--- a/gold/gold-threads.cc
++++ b/gold/gold-threads.cc
+@@ -285,8 +285,7 @@ class Once_initialize
+ {
+  public:
+   Once_initialize()
+-    : once_(PTHREAD_ONCE_INIT)
+-  { }
++  {once_.__sig = _PTHREAD_ONCE_SIG_init; once_.__opaque[0] = 0;}
+ 
+   // Return a pointer to the pthread_once_t variable.
+   pthread_once_t*

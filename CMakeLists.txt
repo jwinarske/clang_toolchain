@@ -80,7 +80,9 @@ endif()
 
 set(LLVM_SRC_DIR ${THIRD_PARTY_DIR}/llvm)
 
-set(LLVM_CONFIG_PATH ${TOOLCHAIN_DIR}/bin/llvm-config)
+set(LLVM_BIN_DIR ${TOOLCHAIN_DIR}/bin)
+
+set(LLVM_CONFIG_PATH ${LLVM_BIN_DIR}/llvm-config)
 
 #
 # sysroot
@@ -146,19 +148,30 @@ ExternalProject_Add(clang
 )
 
 if(BUILD_BINUTILS)
+    if(${TARGET_TRIPLE} MATCHES "arm-none-eabi")
+        set(BINUTILS_TAG users/ARM/embedded-binutils-master-2018q4)
+    else()
+        set(BINUTILS_TAG binutils-2_31_1)
+    endif()
+
     ExternalProject_Add(binutils
-        URL http://ftp.gnu.org/gnu/binutils/binutils-2.31.tar.gz
-        URL_MD5 2a14187976aa0c39ad92363cfbc06505
+        GIT_REPOSITORY git://sourceware.org/git/binutils-gdb.git
+        GIT_TAG ${BINUTILS_TAG}
+        GIT_SHALLOW 1
+        PATCH_COMMAND git apply ${CMAKE_SOURCE_DIR}/cmake/patches/binutils/gold.patch
+        BUILD_IN_SOURCE 0
         SOURCE_DIR ${THIRD_PARTY_DIR}/binutils
-        BUILD_IN_SOURCE 1
         UPDATE_COMMAND ""
-        CONFIGURE_COMMAND ./configure
-            --prefix=${TOOLCHAIN_DIR}
-            --target=${TARGET_TRIPLE}
-            --enable-gold
-            --enable-ld
-            --enable-lto
-            --enable-64-bit-bfd
+        CONFIGURE_COMMAND
+            PATH=${LLVM_BIN_DIR}:$ENV{PATH}
+            ${THIRD_PARTY_DIR}/binutils/configure
+                --prefix=${TOOLCHAIN_DIR}
+                --target=${TARGET_TRIPLE}
+                --enable-gold
+                --enable-ld
+                --enable-lto
+                --disable-werror
+                #--enable-64-bit-bfd
     )
     add_dependencies(binutils clang)
 endif()
@@ -168,6 +181,35 @@ endif()
 #
 
 configure_file(cmake/clang.toolchain.cmake.in ${CMAKE_BINARY_DIR}/toolchain.cmake @ONLY)
+
+if(BUILD_NEWLIB)
+    ExternalProject_Add(newlib
+        GIT_REPOSITORY git://sourceware.org/git/newlib-cygwin.git
+        GIT_TAG newlib-3.0.0
+        GIT_SHALLOW true
+        BUILD_IN_SOURCE 0
+        SOURCE_DIR ${THIRD_PARTY_DIR}/newlib
+        UPDATE_COMMAND ""
+        CONFIGURE_COMMAND
+            CC_FOR_TARGET=${LLVM_BIN_DIR}/clang
+            AS_FOR_TARGET=${LLVM_BIN_DIR}/${TARGET_TRIPLE}-as
+            LD_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ld.lld
+            AR_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ar
+            RANLIB_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ranlib
+		    NM_FOR_TARGET=${LLVM_BIN_DIR}/llvm-nm
+            ${THIRD_PARTY_DIR}/newlib/configure
+                --prefix=${TOOLCHAIN_DIR}
+                --target=${TARGET_TRIPLE}
+                --enable-newlib-supplied-syscalls
+                --disable-newlib-io-float
+                --disable-multilib
+                --with-gnu-as
+#                --disable-werror
+#                --with-cpu=armv7m
+#                --with-mode=thumb 
+#                --enable-interwork
+    )
+endif()
 
 if(BUILD_COMPILER_RT)
     ExternalProject_Add(compiler-rt
@@ -180,7 +222,7 @@ if(BUILD_COMPILER_RT)
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}
             -DCMAKE_BUILD_TYPE=MinSizeRel
             -DCMAKE_VERBOSE_MAKEFILE=ON #${CMAKE_VERBOSE_MAKEFILE}
-            -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
+            -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
             -DCOMPILER_RT_HAS_FPIC_FLAG=ON
             -DCOMPILER_RT_BUILD_BUILTINS=ON
             -DCOMPILER_RT_BUILD_SANITIZERS=ON
@@ -205,7 +247,7 @@ if(BUILD_LIBCXXABI)
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-            -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
+            -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
             -DLIBCXXABI_SYSROOT=${TARGET_SYSROOT}
             -DLIBCXXABI_TARGET_TRIPLE=${TARGET_TRIPLE}
             -DLIBCXXABI_ENABLE_SHARED=ON
@@ -236,7 +278,7 @@ if(BUILD_LIBUNWIND)
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-            -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
+            -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
             -DLIBUNWIND_STANDALONE_BUILD=OFF
             -DLIBUNWIND_TARGET_TRIPLE=${TARGET_TRIPLE}
             -DLIBUNWIND_SYSROOT=${TARGET_SYSROOT}
@@ -269,7 +311,7 @@ if(BUILD_LIBCXX)
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-            -DLLVM_CONFIG_PATH=${TOOLCHAIN_DIR}/bin/llvm-config
+            -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
             -DLIBCXX_STANDALONE_BUILD=OFF
             -DLIBCXX_SYSROOT=${TARGET_SYSROOT}
             -DLIBCXX_TARGET_TRIPLE=${TARGET_TRIPLE}
