@@ -200,14 +200,22 @@ if(BUILD_NEWLIB)
             ${THIRD_PARTY_DIR}/newlib/configure
                 --prefix=${TOOLCHAIN_DIR}
                 --target=${TARGET_TRIPLE}
-                --enable-newlib-supplied-syscalls
-                --disable-newlib-io-float
-                --disable-multilib
-                --with-gnu-as
-#                --disable-werror
-#                --with-cpu=armv7m
-#                --with-mode=thumb 
-#                --enable-interwork
+                --disable-newlib-supplied-syscalls 
+                --enable-newlib-reent-small 
+                --disable-newlib-fvwrite-in-streamio 
+                --disable-newlib-fseek-optimization 
+                --disable-newlib-wide-orient 
+                --enable-newlib-nano-malloc 
+                --disable-newlib-unbuf-stream-opt 
+                --enable-lite-exit 
+                --enable-newlib-global-atexit 
+                --enable-newlib-nano-formatted-io 
+                --disable-nls
+#                --enable-newlib-io-long-long 
+#                --enable-newlib-register-fini 
+#                --enable-newlib-retargetable-locking 
+#                --disable-newlib-supplied-syscalls 
+#                --disable-nls
     )
 endif()
 
