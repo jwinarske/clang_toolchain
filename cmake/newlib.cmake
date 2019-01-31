@@ -55,7 +55,8 @@ ExternalProject_Add(newlib
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND
         CC_FOR_TARGET=${LLVM_BIN_DIR}/clang
-        AS_FOR_TARGET=${LLVM_BIN_DIR}/${TARGET_TRIPLE}-as
+        CFLAGS_FOR_TARGET=-ffreestanding
+        AS_FOR_TARGET=${LLVM_BIN_DIR}/llvm-as
         LD_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ld.lld
         AR_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ar
         RANLIB_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ranlib

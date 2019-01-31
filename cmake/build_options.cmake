@@ -2,7 +2,7 @@
 #
 # Sysroot
 #
-option(BUILD_RPI_SYSROOT "Build Raspberry Pi sysroot" ON)
+option(BUILD_RPI_SYSROOT "Build Raspberry Pi sysroot" OFF)
 
 #
 # Host

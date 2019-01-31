@@ -60,6 +60,7 @@ endif()
 
 if(NOT TARGET_SYSROOT)
     set(TARGET_SYSROOT ${SDK_ROOT_DIR}/sdk/sysroot CACHE PATH "Sysroot Dir")
+    set(BUILD_RPI_SYSROOT ON)
 endif()
 
 if(NOT TARGET_TRIPLE)

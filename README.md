@@ -35,13 +35,13 @@ Note:  If you don't have a commercial account, your travis build will fail due t
 
     git clone https://github.com/jwinarske/clang_toolchain.git
     mkdir build && cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX=`pwd`/../
+    cmake .. -DTARGET_TRIPLE=arm-none-eabi -DTARGET_SYSROOT=../sdk/gcc-arm-none-eabi-8-2018-q4-major
     make -j8
 
 ## CMake Build options
 
 #### BUILD_RPI_SYSROOT
-Build Raspberry Pi sysroot.  Defaults to ON
+Build Raspberry Pi sysroot.  Defaults to ON if TARGET_SYSROOT is not specified.
 
 #### BUILD_LLD
 Checkout and build LLVM Linker for host.  Defaults to ON
