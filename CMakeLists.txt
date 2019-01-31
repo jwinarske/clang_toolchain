@@ -162,7 +162,8 @@ if(BUILD_BINUTILS)
             git checkout gold/gold-threads.cc && 
             git apply ${CMAKE_SOURCE_DIR}/cmake/patches/binutils/gold.patch)
     else()
-        set(BINUTILS_PATCH)
+        set(BINUTILS_PATCH
+            git checkout gold/gold-threads.cc)
     endif()
 
     ExternalProject_Add(binutils
@@ -194,40 +195,7 @@ endif()
 configure_file(cmake/clang.toolchain.cmake.in ${CMAKE_BINARY_DIR}/toolchain.cmake @ONLY)
 
 if(BUILD_NEWLIB)
-    ExternalProject_Add(newlib
-        GIT_REPOSITORY git://sourceware.org/git/newlib-cygwin.git
-        GIT_TAG newlib-3.0.0
-        GIT_SHALLOW true
-        BUILD_IN_SOURCE 0
-        SOURCE_DIR ${THIRD_PARTY_DIR}/newlib
-        UPDATE_COMMAND ""
-        CONFIGURE_COMMAND
-            CC_FOR_TARGET=${LLVM_BIN_DIR}/clang
-            AS_FOR_TARGET=${LLVM_BIN_DIR}/${TARGET_TRIPLE}-as
-            LD_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ld.lld
-            AR_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ar
-            RANLIB_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ranlib
-		    NM_FOR_TARGET=${LLVM_BIN_DIR}/llvm-nm
-            ${THIRD_PARTY_DIR}/newlib/configure
-                --prefix=${TOOLCHAIN_DIR}
-                --target=${TARGET_TRIPLE}
-                --disable-newlib-supplied-syscalls 
-                --enable-newlib-reent-small 
-                --disable-newlib-fvwrite-in-streamio 
-                --disable-newlib-fseek-optimization 
-                --disable-newlib-wide-orient 
-                --enable-newlib-nano-malloc 
-                --disable-newlib-unbuf-stream-opt 
-                --enable-lite-exit 
-                --enable-newlib-global-atexit 
-                --enable-newlib-nano-formatted-io 
-                --disable-nls
-#                --enable-newlib-io-long-long 
-#                --enable-newlib-register-fini 
-#                --enable-newlib-retargetable-locking 
-#                --disable-newlib-supplied-syscalls 
-#                --disable-nls
-    )
+    include(newlib)
 endif()
 
 if(BUILD_COMPILER_RT)
@@ -240,7 +208,7 @@ if(BUILD_COMPILER_RT)
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}
             -DCMAKE_BUILD_TYPE=MinSizeRel
-            -DCMAKE_VERBOSE_MAKEFILE=ON #${CMAKE_VERBOSE_MAKEFILE}
+            -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
             -DCOMPILER_RT_HAS_FPIC_FLAG=ON
             -DCOMPILER_RT_BUILD_BUILTINS=ON

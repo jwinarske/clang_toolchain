@@ -1,0 +1,13 @@
+diff --git a/libgloss/libnosys/configure.in b/libgloss/libnosys/configure.in
+index 89082174..5ced9b04 100644
+--- a/libgloss/libnosys/configure.in
++++ b/libgloss/libnosys/configure.in
+@@ -92,7 +92,7 @@ esac
+ 
+ dnl Make sure we know if elf format used
+ case "${target}" in
+-  *-*-elf)
++  *-*-elf | *-*-eabi*)
+         AC_DEFINE(HAVE_ELF)
+ 
+         AC_CACHE_CHECK([for .previous assembler directive],

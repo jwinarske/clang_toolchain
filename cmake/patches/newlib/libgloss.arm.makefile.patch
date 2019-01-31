@@ -1,0 +1,29 @@
+diff --git a/libgloss/arm/Makefile.in b/libgloss/arm/Makefile.in
+index e1bad171..4f3b5eef 100644
+--- a/libgloss/arm/Makefile.in
++++ b/libgloss/arm/Makefile.in
+@@ -109,7 +109,7 @@ INCLUDES += `if [ -d ${objroot}/newlib ]; then echo -I$(srcroot)/newlib/libc/mac
+ # build a test program for each target board. Just trying to get
+ # it to link is a good test, so we ignore all the errors for now.
+ #
+-all: ${CRT0} ${LINUX_CRT0} ${LINUX_BSP} ${REDBOOT_CRT0} ${REDBOOT_OBJS} ${RDPMON_CRT0} ${RDPMON_BSP} ${RDIMON_CRT0} ${RDIMON_BSP}
++all: ${CRT0}
+ 	@rootpre=`pwd`/; export rootpre; \
+ 	srcrootpre=`cd $(srcdir); pwd`/; export srcrootpre; \
+ 	for dir in .. ${SUBDIRS}; do \
+@@ -206,7 +206,7 @@ distclean maintainer-clean realclean: clean
+ 	rm -f Makefile config.status *~
+ 
+ .PHONY: install info install-info clean-info
+-install: ${CRT0_INSTALL} ${LINUX_INSTALL} ${REDBOOT_INSTALL} ${RDPMON_INSTALL} ${RDIMON_INSTALL} ${IQ80310_INSTALL}  ${PID_INSTALL} ${NANO_INSTALL}
++install: ${CRT0_INSTALL} ${NANO_INSTALL}
+ 	@rootpre=`pwd`/; export rootpre; \
+ 	srcrootpre=`cd $(srcdir); pwd`/; export srcrootpre; \
+ 	for dir in .. ${SUBDIRS}; do \
+@@ -259,4 +259,4 @@ Makefile: Makefile.in config.status @host_makefile_frag_path@
+ config.status: configure
+ 	$(SHELL) config.status --recheck
+ 
+-include $(srcdir)/../multi-build.in
+\ No newline at end of file
++include $(srcdir)/../multi-build.in
