@@ -2,3 +2,4 @@ build
 sdk
 third_party
 .DS_Store
+.vscode

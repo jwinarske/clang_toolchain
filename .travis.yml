@@ -1,8 +1,7 @@
 language: cpp
-
 os: linux
 dist: xenial
-compiler: gcc
+compiler: gcc #compiler used to build host compoments of toolchain
 
 env:
   - CMAKE_ARGS=""

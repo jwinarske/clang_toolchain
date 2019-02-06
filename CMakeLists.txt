@@ -90,7 +90,7 @@ set(LLVM_CONFIG_PATH ${LLVM_BIN_DIR}/llvm-config)
 #
 if(BUILD_RPI_SYSROOT)
     include(rpi.sysroot)
-    set(BUILD_SYSROOT BUILD_RPI_SYSROOT)
+    set(BUILD_SYSROOT ${BUILD_RPI_SYSROOT})
 endif()
 
 
