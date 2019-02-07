@@ -58,6 +58,10 @@ if(NOT TOOLCHAIN_DIR)
     set(TOOLCHAIN_DIR ${SDK_ROOT_DIR}/sdk/toolchain CACHE PATH "Toolchain Dir")
 endif()
 
+if(NOT TOOLCHAIN_FILE_DIR)
+    set(TOOLCHAIN_FILE_DIR ${CMAKE_BINARY_DIR} CACHE PATH "Toolchain File Dir")
+endif()
+
 if(NOT TARGET_SYSROOT)
     set(TARGET_SYSROOT ${SDK_ROOT_DIR}/sdk/sysroot CACHE PATH "Sysroot Dir")
     set(BUILD_RPI_SYSROOT ON)
@@ -88,11 +92,20 @@ set(LLVM_CONFIG_PATH ${LLVM_BIN_DIR}/llvm-config)
 #
 # sysroot
 #
-if(BUILD_RPI_SYSROOT)
-    include(rpi.sysroot)
-    set(BUILD_SYSROOT ${BUILD_RPI_SYSROOT})
+if(BUILD_PLATFORM_SYSROOT)
+    if(BUILD_PLATFORM_RPI)
+        include(rpi.sysroot)
+        set(BUILD_SYSROOT ${BUILD_PLATFORM_RPI})
+    endif()
 endif()
 
+#
+# app toolchain file
+#
+if(BUILD_PLATFORM_RPI)
+    set(PKG_CONFIG_PATH ${TARGET_SYSROOT}/opt/vc/lib/pkgconfig)
+    configure_file(${CMAKE_SOURCE_DIR}/cmake/rpi.clang.toolchain.cmake.in ${TOOLCHAIN_FILE_DIR}/rpi.toolchain.cmake @ONLY)
+endif()
 
 #
 # built for host

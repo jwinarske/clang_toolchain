@@ -1,8 +1,9 @@
 
 #
-# Sysroot
+# Platform
 #
-option(BUILD_RPI_SYSROOT "Build Raspberry Pi sysroot" OFF)
+option(BUILD_PLATFORM_SYSROOT "Build Platform sysroot" OFF)
+option(BUILD_PLATFORM_RPI "Build Platform Raspberry Pi" OFF)
 
 #
 # Host
