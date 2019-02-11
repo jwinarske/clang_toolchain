@@ -38,10 +38,32 @@ Note:  If you don't have a commercial account, your travis build will fail due t
     cmake .. -DTARGET_TRIPLE=arm-none-eabi -DTARGET_SYSROOT=../sdk/gcc-arm-none-eabi-8-2018-q4-major
     make -j8
 
+## AtomicPi LUbuntu Cross Compile Example
+
+    ssh atomicpi@atomicpi.local
+    sudo apt-get install wayland-protocols libwayland-dev
+    exit
+    mkdir -p ~/atomicpi/sysroot && cd ~/atomicpi/sysroot
+    rsync -ravz atomicpi@atomicpi.local:/lib/ lib/
+    rsync -ravz atomicpi@atomicpi.local:/usr/ usr/
+    git clone https://github.com/jwinarske/clang_toolchain.git
+    mkdir build && cd build
+    cmake .. -DTARGET_ARCH=x86_64 -DTARGET_SYSROOT=~/atomicpi/sysroot -DTARGET_TRIPLE=x86_64-linux-gnu -DBUILD_WAYLAND=ON
+    make -j$(nproc)
+    scp ./target/bin/hello_wayland atomicpi@atomicpi.local:/home/atomicpi
+    ssh atomicpi@atomicpi.local
+    ./hello-wayland
+
 ## CMake Build options
 
-#### BUILD_RPI_SYSROOT
-Build Raspberry Pi sysroot.  Defaults to ON if TARGET_SYSROOT is not specified.
+#### BUILD_PLATFORM_RPI
+Build Platform Raspberry Pi
+
+#### BUILD_PLATFORM_SYSROOT
+Build Platform sysroot.  This currently only affects RPI.  You either provide your own, or create from scratch.
+
+#### BUILD_WAYLAND
+Build hello-wayland app
 
 #### BUILD_LLD
 Checkout and build LLVM Linker for host.  Defaults to ON
@@ -66,16 +88,22 @@ Checkout and build libcxx for target.  Defaults to ON
 
 ## CMake variables
 
+#### RASPBIAN_ROOTFS_URL
+Defaults to http://director.downloads.raspberrypi.org/raspbian/archive/
+
 #### RASPBIAN_ROOTFS_VERSION
 Defaults to 2018-11-15-21:02
 
-Note: When changing this you may need to adjust dangling/missing symlinks specific to selected version.  See cmake/rpi.sysroot.cmake
+Note: When changing this you may need to adjust dangling/missing symlinks specific to selected version.  See cmake/rpi/sysroot.cmake
 
 #### THIRD_PARTY_DIR
 Defaults to ${CMAKE_SOURCE_DIR}/third_party
 
 #### SDK_ROOT_DIR
 Defaults to ${CMAKE_SOURCE_DIR}
+
+#### TOOLCHAIN_FILE_DIR
+Defaults to ${CMAKE_BINARY_DIR}
 
 #### TOOLCHAIN_DIR
 Defaults to ${SDK_ROOT_DIR}/sdk/toolchain
@@ -92,9 +120,9 @@ Defaults to OFF.  This variable affects all subprojects.  Alternatively use:
     make VERBOSE=1
 
 #### LLVM_TARGETS_TO_BUILD
-Defaults to ARM.  One example setting would be
+Defaults to X86|ARM|AArch64.  One example setting would be
 
-    -DLLVM_TARGETS_TO_BUILD=ARM|AArch64|X86
+    -DLLVM_TARGETS_TO_BUILD="ARM"
 
 Note: This only affects LLVM/Clang (host), not target builds; compiler-rt, libunwind, libcxxabi, and libcxx.
 

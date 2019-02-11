@@ -30,6 +30,10 @@ find_program(curl REQUIRED)
 
 if(NOT TARGET_SYSROOT)
     set(TARGET_SYSROOT ${CMAKE_SOURCE_DIR}/sdk/sysroot)
+endif()
+
+if(NOT RASPBIAN_ROOTFS_URL)
+    set(RASPBIAN_ROOTFS_URL http://director.downloads.raspberrypi.org/raspbian/archive/)
 endif()    
 
 if(NOT RASPBIAN_ROOTFS_VERSION)
@@ -37,15 +41,17 @@ if(NOT RASPBIAN_ROOTFS_VERSION)
 endif()
 
 set(ROOT_ARCHIVE root.tar.xz)
+
 set(ROOT_ARCHIVE_PATH ${CMAKE_BINARY_DIR}/sysroot-prefix/src/${ROOT_ARCHIVE})
 
+
 ExternalProject_Add(sysroot
-    DOWNLOAD_COMMAND curl http://director.downloads.raspberrypi.org/raspbian/archive/${RASPBIAN_ROOTFS_VERSION}/${ROOT_ARCHIVE} -s -o ${ROOT_ARCHIVE} 
+    DOWNLOAD_COMMAND curl ${RASPBIAN_ROOTFS_URL}${RASPBIAN_ROOTFS_VERSION}/${ROOT_ARCHIVE} -s -o ${ROOT_ARCHIVE}
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
     INSTALL_COMMAND
-      ${CMAKE_COMMAND} -E make_directory ${TARGET_SYSROOT} && 
+      ${CMAKE_COMMAND} -E make_directory ${TARGET_SYSROOT} &&
       cd ${TARGET_SYSROOT} &&
       tar -xf ${ROOT_ARCHIVE_PATH} ./opt/vc/ > /dev/null &&
       tar -xf ${ROOT_ARCHIVE_PATH} ./lib/ > /dev/null &&

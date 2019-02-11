@@ -68,11 +68,11 @@ if(NOT TARGET_SYSROOT)
 endif()
 
 if(NOT TARGET_TRIPLE)
-    set(TARGET_TRIPLE arm-linux-gnueabihf)
+    set(TARGET_TRIPLE arm-linux-gnueabihf CACHE STRING "Target Triple")
 endif()
 
 if(NOT LLVM_TARGETS_TO_BUILD)
-    set(LLVM_TARGETS_TO_BUILD ARM)
+    set(LLVM_TARGETS_TO_BUILD "X86|ARM|AArch64")
 endif()
 
 if(NOT LLVM_VERSION)
@@ -89,60 +89,69 @@ set(LLVM_BIN_DIR ${TOOLCHAIN_DIR}/bin)
 
 set(LLVM_CONFIG_PATH ${LLVM_BIN_DIR}/llvm-config)
 
+
 #
-# sysroot
+# create target toolchain file
 #
-if(BUILD_PLATFORM_SYSROOT)
-    if(BUILD_PLATFORM_RPI)
-        include(rpi.sysroot)
+set(PKG_CONFIG_PATH ${TARGET_SYSROOT}/usr/lib/${TARGET_TRIPLE}/pkgconfig:${TARGET_SYSROOT}/usr/share/pkgconfig)
+
+if(BUILD_PLATFORM_RPI)
+    set(PKG_CONFIG_PATH ${PKG_CONFIG_PATH}:${TARGET_SYSROOT}/opt/vc/lib/pkgconfig)
+
+    # optionally create sysroot
+    if(BUILD_PLATFORM_SYSROOT)
         set(BUILD_SYSROOT ${BUILD_PLATFORM_RPI})
+        include(rpi/sysroot)
     endif()
 endif()
 
-#
-# app toolchain file
-#
-if(BUILD_PLATFORM_RPI)
-    set(PKG_CONFIG_PATH ${TARGET_SYSROOT}/opt/vc/lib/pkgconfig)
-    configure_file(${CMAKE_SOURCE_DIR}/cmake/rpi.clang.toolchain.cmake.in ${TOOLCHAIN_FILE_DIR}/rpi.toolchain.cmake @ONLY)
-endif()
+configure_file(${CMAKE_SOURCE_DIR}/cmake/target.clang.toolchain.cmake.in ${TOOLCHAIN_FILE_DIR}/target.toolchain.cmake @ONLY)
+
 
 #
 # built for host
 #
 
-set(LLVM_CHECKOUT
-    cd ${THIRD_PARTY_DIR} &&
+set(LLVM_CHECKOUT cd ${THIRD_PARTY_DIR} &&
     svn co -q http://llvm.org/svn/llvm-project/llvm/${LLVM_VERSION} llvm &&
-    cd ${LLVM_SRC_DIR}/tools &&
     svn co -q http://llvm.org/svn/llvm-project/cfe/${LLVM_VERSION} clang)
 
+set(LLVM_ENABLE_PROJECTS "clang")
+
 if(BUILD_LLD)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${LLVM_SRC_DIR}/tools &&
+    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
         svn co -q http://llvm.org/svn/llvm-project/lld/${LLVM_VERSION} lld)
-else()
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${LLVM_SRC_DIR}/tools && rm -rf lld)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|lld")
 endif()
 
 if(BUILD_LLDB)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${LLVM_SRC_DIR}/tools &&
+    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
         svn co -q http://llvm.org/svn/llvm-project/lldb/${LLVM_VERSION} lldb)
-else()
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${LLVM_SRC_DIR}/tools && rm -rf lldb)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|lldb")
+endif()
+
+if(BUILD_COMPILER_RT)
+    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
+    svn co -q http://llvm.org/svn/llvm-project/compiler-rt/${LLVM_VERSION} compiler-rt)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|compiler-rt")
+endif()
+
+if(BUILD_LIBUNWIND)
+    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
+    svn co -q http://llvm.org/svn/llvm-project/libunwind/${LLVM_VERSION} libunwind)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libunwind")
 endif()
 
 if(BUILD_LIBCXXABI)
     set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
         svn co -q http://llvm.org/svn/llvm-project/libcxxabi/${LLVM_VERSION} libcxxabi)
-else()
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} && rm -rf libcxxabi)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libcxxabi")
 endif()
 
 if(BUILD_LIBCXX)
     set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
         svn co -q http://llvm.org/svn/llvm-project/libcxx/${LLVM_VERSION} libcxx)
-else()
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} && rm -rf libcxx)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libcxx")
 endif()
 
 ExternalProject_Add(clang
@@ -159,6 +168,16 @@ ExternalProject_Add(clang
         -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
         -DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD}
         -DLLVM_ENABLE_ASSERTIONS=ON
+        -DLLVM_BUILD_DOCS=OFF
+        -DLLVM_INCLUDE_DOCS=OFF
+        -DLLVM_ENABLE_DOXYGEN=OFF
+        -DLLVM_ENABLE_SPHINX=OFF
+        -DLLVM_ENABLE_OCAMLDOC=OFF
+        -DLLVM_ENABLE_BINDINGS=OFF
+        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+        -DLLVM_ENABLE_PROJECTS=${LLVM_ENABLE_PROJECTS}
+        -DLLVM_BUILD_RUNTIME=ON
+        -DLLVM_USE_HOST_TOOLS=ON
 )
 
 if(BUILD_BINUTILS)
@@ -197,7 +216,7 @@ if(BUILD_BINUTILS)
                 --enable-ld
                 --enable-lto
                 --disable-werror
-                #--enable-64-bit-bfd
+                --enable-64-bit-bfd
     )
     add_dependencies(binutils clang)
 endif()
@@ -214,15 +233,15 @@ endif()
 
 if(BUILD_COMPILER_RT)
     ExternalProject_Add(compiler-rt
-        SVN_REPOSITORY http://llvm.org/svn/llvm-project/compiler-rt/${LLVM_VERSION}
+    DOWNLOAD_COMMAND ""
         SOURCE_DIR ${THIRD_PARTY_DIR}/compiler-rt
         BUILD_IN_SOURCE 0
-        UODATE_COMMAND ""
+        UPDATE_COMMAND ""
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}
             -DCMAKE_BUILD_TYPE=MinSizeRel
-            -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
+            -DCMAKE_VERBOSE_MAKEFILE=ON
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
             -DCOMPILER_RT_HAS_FPIC_FLAG=ON
             -DCOMPILER_RT_BUILD_BUILTINS=ON
@@ -230,6 +249,7 @@ if(BUILD_COMPILER_RT)
             -DCOMPILER_RT_BUILD_XRAY=ON
             -DCOMPILER_RT_BUILD_LIBFUZZER=OFF
             -DCOMPILER_RT_BUILD_PROFILE=OFF
+            -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
     )
     add_dependencies(compiler-rt clang)
     if(BUILD_SYSROOT)
@@ -245,7 +265,7 @@ if(BUILD_LIBCXXABI)
         UPDATE_COMMAND ""
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
+            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
@@ -270,13 +290,13 @@ endif()
 
 if(BUILD_LIBUNWIND)
     ExternalProject_Add(libunwind
-        SVN_REPOSITORY http://llvm.org/svn/llvm-project/libunwind/${LLVM_VERSION}
+        DOWNLOAD_COMMAND ""
         SOURCE_DIR ${THIRD_PARTY_DIR}/libunwind
         BUILD_IN_SOURCE 0
         UPDATE_COMMAND ""
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
+            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
@@ -309,7 +329,7 @@ if(BUILD_LIBCXX)
         UPDATE_COMMAND ""
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
+            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
@@ -328,4 +348,15 @@ if(BUILD_LIBCXX)
     if(BUILD_SYSROOT)
         add_dependencies(libcxx sysroot)
     endif()
+endif()
+
+#
+# Platform Apps
+#
+if(BUILD_PLATFORM_RPI)
+    include(rpi/apps)
+endif()
+
+if(BUILD_WAYLAND)
+    include(wayland/apps)
 endif()

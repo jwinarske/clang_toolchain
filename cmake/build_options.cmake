@@ -5,6 +5,8 @@
 option(BUILD_PLATFORM_SYSROOT "Build Platform sysroot" OFF)
 option(BUILD_PLATFORM_RPI "Build Platform Raspberry Pi" OFF)
 
+option(BUILD_WAYLAND "Build expecting wayland-protocols, wayland-client, etc in sysroot" OFF)
+
 #
 # Host
 #
