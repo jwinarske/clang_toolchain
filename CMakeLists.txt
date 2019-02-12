@@ -64,7 +64,6 @@ endif()
 
 if(NOT TARGET_SYSROOT)
     set(TARGET_SYSROOT ${SDK_ROOT_DIR}/sdk/sysroot CACHE PATH "Sysroot Dir")
-    set(BUILD_RPI_SYSROOT ON)
 endif()
 
 if(NOT TARGET_TRIPLE)
@@ -85,9 +84,47 @@ endif()
 
 set(LLVM_SRC_DIR ${THIRD_PARTY_DIR}/llvm)
 
+
 set(LLVM_BIN_DIR ${TOOLCHAIN_DIR}/bin)
 
 set(LLVM_CONFIG_PATH ${LLVM_BIN_DIR}/llvm-config)
+
+
+#
+# rsync sysroot
+#
+find_program(RSYNC rsync)
+if(NOT BUILD_PLATFORM_SYSROOT AND RSYNC AND TARGET_HOSTNAME)
+
+    MESSAGE(STATUS "Syncing sysroot from '${TARGET_HOSTNAME}'")
+
+    set(TARGET_SYSROOT_RSYNC 
+        mkdir -p ${TARGET_SYSROOT} && cd ${TARGET_SYSROOT} && 
+        rsync -avz
+            --exclude=firmware
+            --exclude=modules
+            ${TARGET_HOSTNAME}:/lib/ lib/ && 
+        rsync -avz 
+            --exclude=lib/chromium-browser/
+            --exclude=lib/firefox/
+            --exclude=lib/cups/backend/cups-brf # random permission error
+            ${TARGET_HOSTNAME}:/usr/ usr/)
+
+    if(BUILD_PLATFORM_RPI)
+        set(TARGET_SYSROOT_RSYNC ${TARGET_SYSROOT_RSYNC} && 
+            mkdir -p ${TARGET_SYSROOT}/opt && 
+            rsync -avz ${TARGET_HOSTNAME}:/opt/vc opt/)
+    endif()
+
+    set(BUILD_SYSROOT ON)
+    ExternalProject_Add(sysroot
+        DOWNLOAD_COMMAND ""
+        UPDATE_COMMAND ${TARGET_SYSROOT_RSYNC}
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ""
+    )
+endif()
 
 
 #
@@ -98,21 +135,28 @@ set(PKG_CONFIG_PATH ${TARGET_SYSROOT}/usr/lib/${TARGET_TRIPLE}/pkgconfig:${TARGE
 if(BUILD_PLATFORM_RPI)
     set(PKG_CONFIG_PATH ${PKG_CONFIG_PATH}:${TARGET_SYSROOT}/opt/vc/lib/pkgconfig)
 
-    # optionally create sysroot
+    # baseline sysroot
     if(BUILD_PLATFORM_SYSROOT)
-        set(BUILD_SYSROOT ${BUILD_PLATFORM_RPI})
+        set(BUILD_SYSROOT ON)
         include(rpi/sysroot)
     endif()
 endif()
 
 if(NOT BUILD_LIBCXXABI_EXCEPTIONS)
     set(TARGET_CXX_FLAGS "-stdlib=libc++ -fno-exceptions")
-else()    
+else()
     set(TARGET_CXX_FLAGS "-stdlib=libc++")
 endif()
 
-set(TARGET_C_LINK_FLAGS   "--rtlib=compiler-rt -fuse-ld=gold")
-set(TARGET_CXX_LINK_FLAGS "--rtlib=compiler-rt -fuse-ld=gold -lc++abi -lunwind")
+if(BUILD_BINUTILS)
+    set(TARGET_LINKER gold)
+else()
+    set(BUILD_LLD ON)
+    set(TARGET_LINKER lld)
+endif()
+
+set(TARGET_C_LINK_FLAGS   "--rtlib=compiler-rt -fuse-ld=${TARGET_LINKER}")
+set(TARGET_CXX_LINK_FLAGS "--rtlib=compiler-rt -fuse-ld=${TARGET_LINKER} -lc++abi -lunwind")
 
 configure_file(${CMAKE_SOURCE_DIR}/cmake/target.clang.toolchain.cmake.in ${TOOLCHAIN_FILE_DIR}/target.toolchain.cmake @ONLY)
 
@@ -211,7 +255,7 @@ if(BUILD_BINUTILS)
     ExternalProject_Add(binutils
         GIT_REPOSITORY git://sourceware.org/git/binutils-gdb.git
         GIT_TAG ${BINUTILS_TAG}
-        GIT_SHALLOW 1
+        GIT_SHALLOW ON
         PATCH_COMMAND ${BINUTILS_PATCH}
         BUILD_IN_SOURCE 0
         SOURCE_DIR ${THIRD_PARTY_DIR}/binutils
@@ -225,7 +269,7 @@ if(BUILD_BINUTILS)
                 --enable-ld
                 --enable-lto
                 --disable-werror
-                --enable-64-bit-bfd
+                #--enable-64-bit-bfd
     )
     add_dependencies(binutils clang)
 endif()
@@ -261,6 +305,9 @@ if(BUILD_COMPILER_RT)
             -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
     )
     add_dependencies(compiler-rt clang)
+    if(BUILD_BINUTILS)
+        add_dependencies(compiler-rt binutils)
+    endif()
     if(BUILD_SYSROOT)
         add_dependencies(compiler-rt sysroot)
     endif()
@@ -289,6 +336,9 @@ if(BUILD_LIBCXXABI)
             -DLIBCXXABI_ENABLE_PEDANTIC=ON
     )
     add_dependencies(libcxxabi clang)
+    if(BUILD_BINUTILS)
+        add_dependencies(libcxxabi binutils)
+    endif()
     if(BUILD_COMPILER_RT)
         add_dependencies(libcxxabi compiler-rt)
     endif()
@@ -318,6 +368,9 @@ if(BUILD_LIBUNWIND)
             -DLIBUNWIND_ENABLE_THREADS=ON
     )
     add_dependencies(libunwind clang)
+    if(BUILD_BINUTILS)
+        add_dependencies(libunwind binutils)
+    endif()
     if(BUILD_COMPILER_RT)
         add_dependencies(libunwind compiler-rt)
     endif()
@@ -350,7 +403,10 @@ if(BUILD_LIBCXX)
             -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${BUILD_LIBUNWIND}
     )
     add_dependencies(libcxx libcxxabi)
-    if(BUILD_COMPILER_RT)
+    if(BUILD_BINUTILS)
+        add_dependencies(libcxx binutils)
+    endif()
+   if(BUILD_COMPILER_RT)
         add_dependencies(libcxx compiler-rt)
     endif()
     if(BUILD_SYSROOT)

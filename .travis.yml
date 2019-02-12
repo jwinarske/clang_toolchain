@@ -4,7 +4,7 @@ dist: xenial
 compiler: gcc #compiler used to build host compoments of toolchain
 
 env:
-  - CMAKE_ARGS=""
+  - CMAKE_ARGS="-DLLVM_TARGETS_TO_BUILD=ARM -DBUILD_PLATFORM_RPI=ON -DBUILD_PLATFORM_SYSROOT=ON -DBUILD_MRAA=ON"
 
 install:
 

@@ -29,35 +29,72 @@ Note:  If you don't have a commercial account, your travis build will fail due t
 
     Alternatively install LLVM/Clang
 
-3.  sysroot generation uses ln, tar, and curl
+3.  sysroot generation uses rsync, or ln, tar, and curl.
 
 ## Build Example
 
-    git clone https://github.com/jwinarske/clang_toolchain.git
-    mkdir build && cd build
-    cmake .. -DTARGET_TRIPLE=arm-none-eabi -DTARGET_SYSROOT=../sdk/gcc-arm-none-eabi-8-2018-q4-major
-    make -j8
-
-## AtomicPi LUbuntu Cross Compile Example
-
-    ssh atomicpi@atomicpi.local
-    sudo apt-get install wayland-protocols libwayland-dev
-    exit
-    mkdir -p ~/atomicpi/sysroot && cd ~/atomicpi/sysroot
-    rsync -ravz atomicpi@atomicpi.local:/lib/ lib/
-    rsync -ravz atomicpi@atomicpi.local:/usr/ usr/
     mkdir -p ~/git && cd ~/git
     git clone https://github.com/jwinarske/clang_toolchain.git
-    cd clang_toolchain
-    mkdir build && cd build
-    cmake .. -DTARGET_ARCH=x86_64 -DTARGET_SYSROOT=/home/joel/atomicpi/sysroot -DTARGET_TRIPLE=x86_64-linux-gnu -DBUILD_WAYLAND=ON
-    make -j$(nproc)
-    scp ./target/bin/hello_wayland atomicpi@atomicpi.local:/home/atomicpi
-    ssh atomicpi@atomicpi.local
-    ./hello-wayland
+    cd clang_toolchain && mkdir build && cd build
+    cmake .. -DTARGET_TRIPLE=arm-none-eabi -DTARGET_SYSROOT=/home/joel/sdk/gcc-arm-none-eabi-8-2018-q4-major
+    make -j$(numproc)
 
-### Note
-When passing path values to CMake don't use paths prefixed with '~'.  Use the aboslute path, and save your hair...
+## Notes
+When passing path values to CMake use aboslute paths
+
+If you want to force a rebuild of a sub-project, either delete the specific folder from your build folder, or delete to appropriate flags from the sub projects build folder.
+
+## Cross compiling for RaspberryPi (armhf raspbian)
+
+#### Build 7.0.1 Toolchain, populate sysroot from target via rsync, and build MRAA
+    -DLLVM_TARGETS_TO_BUILD="ARM"
+    -DBUILD_PLATFORM_RPI=ON
+    -DTARGET_HOSTNAME=pi@raspberrypi.local
+    -DBUILD_MRAA=ON
+
+#### Build 7.0.1 Toolchain, create sysroot from official rootfs, and build MRAA
+    -DLLVM_TARGETS_TO_BUILD="ARM"
+    -DBUILD_PLATFORM_RPI=ON
+    -DBUILD_PLATFORM_SYSROOT=ON
+    -DBUILD_MRAA=ON
+
+#### Build 8.0.0 rc2 Toolchain, populate sysroot from target via rsync, and build MRAA
+    -DLLVM_TARGETS_TO_BUILD="ARM"
+    -DBUILD_PLATFORM_RPI=ON
+    -DTARGET_HOSTNAME=pi@raspberrypi.local
+    -DBUILD_MRAA=ON
+    -DLLVM_VERSION=tags/RELEASE_800/rc2/
+    -DLLVM_VER_DIR=8.0.0
+
+### Cross compiling for AtomicPi (x86_64 lubuntu)
+
+#### Build 7.0.1 Toolchain, populate sysroot from target via rsync, and build MRAA
+    -DTARGET_ARCH=x86_64
+    -DTARGET_TRIPLE=x86_64-linux-gnu
+    -DLLVM_TARGETS_TO_BUILD="X86" -DTARGET_HOSTNAME=atomic@atomicpi.local
+    -DBUILD_MRAA=ON
+
+#### Build 8.0.0 rc2 Toolchain, populate sysroot from target via rsync, and build MRAA
+    -DTARGET_ARCH=x86_64
+    -DTARGET_TRIPLE=x86_64-linux-gnu
+    -DLLVM_TARGETS_TO_BUILD="X86" -DTARGET_HOSTNAME=atomic@atomicpi.local
+    -DBUILD_MRAA=ON
+    -DLLVM_VERSION=tags/RELEASE_800/rc2/
+    -DLLVM_VER_DIR=8.0.0
+
+#### Sequence to build 7.0.1 Toolchain, populate sysroot from target, build hello-wayland, push to target, and execute
+
+    ssh atomic@atomicpi.local
+    sudo apt-get install wayland-protocols libwayland-dev
+    exit
+    mkdir -p ~/git && cd ~/git
+    git clone https://github.com/jwinarske/clang_toolchain.git
+    cd clang_toolchain && mkdir build && cd build
+    cmake .. -DTARGET_ARCH=x86_64 -DTARGET_TRIPLE=x86_64-linux-gnu -DTARGET_HOSTNAME=atomic@atomicpi.local -DBUILD_WAYLAND=ON
+    make -j$(nproc)
+    scp ./target/bin/hello_wayland atomic@atomicpi.local:/home/atomicpi
+    ssh atomic@atomicpi.local
+    ./hello-wayland
 
 ## CMake Build options
 
