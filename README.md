@@ -50,11 +50,14 @@ Note:  If you don't have a commercial account, your travis build will fail due t
     git clone https://github.com/jwinarske/clang_toolchain.git
     cd clang_toolchain
     mkdir build && cd build
-    cmake .. -DTARGET_ARCH=x86_64 -DTARGET_SYSROOT=~/atomicpi/sysroot -DTARGET_TRIPLE=x86_64-linux-gnu -DBUILD_WAYLAND=ON
+    cmake .. -DTARGET_ARCH=x86_64 -DTARGET_SYSROOT=/home/joel/atomicpi/sysroot -DTARGET_TRIPLE=x86_64-linux-gnu -DBUILD_WAYLAND=ON
     make -j$(nproc)
     scp ./target/bin/hello_wayland atomicpi@atomicpi.local:/home/atomicpi
     ssh atomicpi@atomicpi.local
     ./hello-wayland
+
+### Note
+When passing path values to CMake don't use paths prefixed with '~'.  Use the aboslute path, and save your hair...
 
 ## CMake Build options
 

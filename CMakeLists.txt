@@ -105,8 +105,10 @@ if(BUILD_PLATFORM_RPI)
     endif()
 endif()
 
-if(NOT BUILD_LIBCXXABI_ENABLE_EXCEPTIONS)
-    set(TARGET_CXX_FLAGS "-fno-exceptions")
+if(NOT BUILD_LIBCXXABI_EXCEPTIONS)
+    set(TARGET_CXX_FLAGS "-stdlib=libc++ -fno-exceptions")
+else()    
+    set(TARGET_CXX_FLAGS "-stdlib=libc++")
 endif()
 
 set(TARGET_C_LINK_FLAGS   "--rtlib=compiler-rt -fuse-ld=gold")
@@ -365,4 +367,34 @@ endif()
 
 if(BUILD_WAYLAND)
     include(wayland/apps)
+endif()
+
+#
+# Common
+#
+if(BUILD_MRAA AND BUILD_LIBCXXABI AND BUILD_LIBCXX)
+    ExternalProject_Add(mraa
+        GIT_REPOSITORY https://github.com/intel-iot-devkit/mraa.git
+        GIT_TAG master
+        GIT_SHALLOW ON
+        SOURCE_DIR ${THIRD_PARTY_DIR}/mraa
+        BUILD_IN_SOURCE 0
+        UPDATE_COMMAND ""
+        CMAKE_ARGS
+            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/target.toolchain.cmake
+            -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/target
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -DBUILDSWIG=OFF
+            -DBUILDSWIGPYTHON=OFF
+            -DBUILDSWIGNODE=OFF
+            -DJSONPLAT=OFF
+            -DBUILDTESTS=OFF
+    )
+    add_dependencies(mraa libcxxabi libcxx)
+    if(BUILD_BINUTILS)
+        add_dependencies(mraa binutils)
+    endif()
+    if(BUILD_SYSROOT)
+        add_dependencies(mraa sysroot)
+    endif()
 endif()
