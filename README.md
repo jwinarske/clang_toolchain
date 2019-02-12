@@ -46,7 +46,9 @@ Note:  If you don't have a commercial account, your travis build will fail due t
     mkdir -p ~/atomicpi/sysroot && cd ~/atomicpi/sysroot
     rsync -ravz atomicpi@atomicpi.local:/lib/ lib/
     rsync -ravz atomicpi@atomicpi.local:/usr/ usr/
+    mkdir -p ~/git && cd ~/git
     git clone https://github.com/jwinarske/clang_toolchain.git
+    cd clang_toolchain
     mkdir build && cd build
     cmake .. -DTARGET_ARCH=x86_64 -DTARGET_SYSROOT=~/atomicpi/sysroot -DTARGET_TRIPLE=x86_64-linux-gnu -DBUILD_WAYLAND=ON
     make -j$(nproc)
@@ -79,6 +81,9 @@ Checkout and build compiler-rt.  Defaults to ON
 
 #### BUILD_LIBCXXABI
 Checkout and build libcxxabi for target.  Defaults to ON
+
+#### BUILD_LIBCXXABI_ENABLE_EXCEPTIONS
+Build c++abi with exception support  Defaults to ON
 
 #### BUILD_LIBUNWIND
 Checkout and build libunwind for  target.  Defaults to ON

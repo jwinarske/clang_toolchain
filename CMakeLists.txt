@@ -105,6 +105,13 @@ if(BUILD_PLATFORM_RPI)
     endif()
 endif()
 
+if(NOT BUILD_LIBCXXABI_ENABLE_EXCEPTIONS)
+    set(TARGET_CXX_FLAGS "-fno-exceptions")
+endif()
+
+set(TARGET_C_LINK_FLAGS   "--rtlib=compiler-rt -fuse-ld=gold")
+set(TARGET_CXX_LINK_FLAGS "--rtlib=compiler-rt -fuse-ld=gold -lc++abi -lunwind")
+
 configure_file(${CMAKE_SOURCE_DIR}/cmake/target.clang.toolchain.cmake.in ${TOOLCHAIN_FILE_DIR}/target.toolchain.cmake @ONLY)
 
 
@@ -275,8 +282,8 @@ if(BUILD_LIBCXXABI)
             -DLIBCXXABI_USE_COMPILER_RT=${BUILD_COMPILER_RT}
             -DLIBCXXABI_USE_LLVM_UNWINDER=${BUILD_LIBUNWIND}
             -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${BUILD_LIBUNWIND}
-            -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
-            -DLIBCXXABI_ENABLE_ASSERTIONS=ON
+            -DLIBCXXABI_ENABLE_EXCEPTIONS=${BUILD_LIBCXXABI_EXCEPTIONS}
+            -DLIBCXXABI_ENABLE_ASSERTIONS=${BUILD_LIBCXXABI_ASSERTIONS}
             -DLIBCXXABI_ENABLE_PEDANTIC=ON
     )
     add_dependencies(libcxxabi clang)
@@ -305,8 +312,7 @@ if(BUILD_LIBUNWIND)
             -DLIBUNWIND_SYSROOT=${TARGET_SYSROOT}
             -DLIBUNWIND_USE_COMPILER_RT=${BUILD_COMPILER_RT}
             -DLIBUNWIND_ENABLE_CROSS_UNWINDING=OFF
-            -DLIBUNWIND_ENABLE_STATIC=ON
-            -DLIBUNWIND_ENABLE_SHARED=OFF
+            -DLIBUNWIND_ENABLE_SHARED=ON
             -DLIBUNWIND_ENABLE_THREADS=ON
     )
     add_dependencies(libunwind clang)

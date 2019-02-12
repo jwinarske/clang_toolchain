@@ -56,9 +56,9 @@ SET(CMAKE_C_COMPILER_TARGET @TARGET_TRIPLE@)
 SET(CMAKE_CXX_COMPILER_TARGET @TARGET_TRIPLE@)
 
 # compiler flags
-set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -fno-integrated-as")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -fno-exceptions")
-set(CMAKE_EXE_LINKER_FLAGS "--rtlib=compiler-rt ${CMAKE_EXE_LINKER_FLAGS} -L@TOOLCHAIN_DIR@/lib -fuse-ld=gold")
-set(CMAKE_SHARED_LINKER_FLAGS "--rtlib=compiler-rt ${CMAKE_SHARED_LINKER_FLAGS} -L@TOOLCHAIN_DIR@/lib -fuse-ld=gold")
+set(CMAKE_ASM_FLAGS "-fno-integrated-as" CACHE STRING "ASM Flags")
+set(CMAKE_CXX_FLAGS "-stdlib=libc++ @TARGET_CXX_FLAGS@" CACHE STRING "C++ Flags")
+set(CMAKE_C_LINK_FLAGS "@TARGET_C_LINK_FLAGS@" CACHE STRING "C Link Flags")
+set(CMAKE_CXX_LINK_FLAGS "@TARGET_CXX_LINK_FLAGS@" CACHE STRING "C++ Link Flags")
 
 set(ENV{PKG_CONFIG_PATH}  "@PKG_CONFIG_PATH@")
