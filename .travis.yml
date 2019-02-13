@@ -4,8 +4,7 @@ dist: xenial
 compiler: gcc #compiler used to build host compoments of toolchain
 
 env:
-  - CMAKE_ARGS="-DLLVM_TARGETS_TO_BUILD=ARM -DBUILD_PLATFORM_RPI=ON -DBUILD_PLATFORM_SYSROOT=ON -DBUILD_MRAA=ON"
-
+  - CMAKE_ARGS="-DLLVM_VERSION=tags/RELEASE_800/rc2/ -DLLVM_VER_DIR=8.0.0 -DBUILD_PLATFORM_RPI=ON -DBUILD_PLATFORM_SYSROOT=ON -DBUILD_MRAA=ON"
 install:
 
   - sudo apt-get install texinfo
