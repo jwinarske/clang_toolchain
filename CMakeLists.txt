@@ -229,7 +229,7 @@ ExternalProject_Add(clang
         -DLLVM_ENABLE_BINDINGS=OFF
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
         -DLLVM_ENABLE_PROJECTS=${LLVM_ENABLE_PROJECTS}
-        -DLLVM_BUILD_RUNTIME=ON
+        -DLLVM_BUILD_RUNTIME=OFF
         -DLLVM_USE_HOST_TOOLS=ON
 )
 
@@ -285,8 +285,9 @@ if(BUILD_NEWLIB)
 endif()
 
 if(BUILD_COMPILER_RT)
+    
     ExternalProject_Add(compiler-rt
-    DOWNLOAD_COMMAND ""
+        DOWNLOAD_COMMAND ""
         SOURCE_DIR ${THIRD_PARTY_DIR}/compiler-rt
         BUILD_IN_SOURCE 0
         UPDATE_COMMAND ""
@@ -302,7 +303,7 @@ if(BUILD_COMPILER_RT)
             -DCOMPILER_RT_BUILD_XRAY=ON
             -DCOMPILER_RT_BUILD_LIBFUZZER=OFF
             -DCOMPILER_RT_BUILD_PROFILE=OFF
-            -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+            -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF # LLVM BUG: for arm-linux-eabihf this flags causes install to be armhf-linux-eabihf
     )
     add_dependencies(compiler-rt clang)
     if(BUILD_BINUTILS)
@@ -311,6 +312,7 @@ if(BUILD_COMPILER_RT)
     if(BUILD_SYSROOT)
         add_dependencies(compiler-rt sysroot)
     endif()
+
 endif()
 
 if(BUILD_LIBCXXABI)
@@ -359,13 +361,11 @@ if(BUILD_LIBUNWIND)
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
-            -DLIBUNWIND_STANDALONE_BUILD=OFF
+            -DLIBUNWIND_STANDALONE_BUILD=ON
             -DLIBUNWIND_TARGET_TRIPLE=${TARGET_TRIPLE}
             -DLIBUNWIND_SYSROOT=${TARGET_SYSROOT}
-            -DLIBUNWIND_USE_COMPILER_RT=${BUILD_COMPILER_RT}
-            -DLIBUNWIND_ENABLE_CROSS_UNWINDING=OFF
             -DLIBUNWIND_ENABLE_SHARED=ON
-            -DLIBUNWIND_ENABLE_THREADS=ON
+            -ULIBUNWIND_USE_COMPILER_RT
     )
     add_dependencies(libunwind clang)
     if(BUILD_BINUTILS)
@@ -437,8 +437,8 @@ if(BUILD_MRAA AND BUILD_LIBCXXABI AND BUILD_LIBCXX)
         BUILD_IN_SOURCE 0
         UPDATE_COMMAND ""
         CMAKE_ARGS
-            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/target.toolchain.cmake
-            -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/target
+            -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE_DIR}/target.toolchain.cmake
+            -DCMAKE_INSTALL_PREFIX=${TARGET_SYSROOT}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DBUILDSWIG=OFF
             -DBUILDSWIGPYTHON=OFF

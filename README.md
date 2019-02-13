@@ -52,11 +52,14 @@ If you want to force a rebuild of a sub-project, either delete the specific fold
     -DTARGET_HOSTNAME=pi@raspberrypi.local
     -DBUILD_MRAA=ON
 
-#### Build 7.0.1 Toolchain, create sysroot from official rootfs, and build MRAA
-    -DLLVM_TARGETS_TO_BUILD="ARM"
+#### Build 8.0.0 rc2 Toolchain, create sysroot from official rootfs, build MRAA, and specify sdk folder
+    -DLLVM_VERSION=tags/RELEASE_800/rc2/
+    -DLLVM_VER_DIR=8.0.0
     -DBUILD_PLATFORM_RPI=ON
     -DBUILD_PLATFORM_SYSROOT=ON
     -DBUILD_MRAA=ON
+    -DSDK_ROOT_DIR=/home/joel/rpi
+    -DTOOLCHAIN_FILE_DIR=/home/joel/rpi/sdk/build/cmake
 
 #### Build 8.0.0 rc2 Toolchain, populate sysroot from target via rsync, and build MRAA
     -DLLVM_TARGETS_TO_BUILD="ARM"
@@ -83,7 +86,6 @@ If you want to force a rebuild of a sub-project, either delete the specific fold
     -DLLVM_VER_DIR=8.0.0
 
 #### Sequence to build 7.0.1 Toolchain, populate sysroot from target, build hello-wayland, push to target, and execute
-
     ssh atomic@atomicpi.local
     sudo apt-get install wayland-protocols libwayland-dev
     exit

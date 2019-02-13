@@ -55,5 +55,5 @@ SET(CMAKE_ASM_COMPILER_TARGET @TARGET_TRIPLE@)
 SET(CMAKE_C_COMPILER_TARGET @TARGET_TRIPLE@)
 SET(CMAKE_CXX_COMPILER_TARGET @TARGET_TRIPLE@)
 
-SET(CMAKE_C_LINK_FLAGS "-nodefaultlibs -lc -fuse-ld=lld")
-SET(CMAKE_CXX_LINK_FLAGS "-nodefaultlibs -lc -fuse-ld=lld")
+SET(CMAKE_C_LINK_FLAGS "-nodefaultlibs -lc -fuse-ld=lld -v")
+SET(CMAKE_CXX_LINK_FLAGS "-nodefaultlibs -lc -fuse-ld=lld -v")
