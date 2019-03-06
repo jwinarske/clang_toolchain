@@ -25,7 +25,7 @@ Note:  If you don't have a commercial account, your travis build will fail due t
 2. Host capable of building something
 
         sudo apt-get update
-        sudo apt-get install build-essential
+        sudo apt install gcc clang build-essentials make subversion
 
     Alternatively install LLVM/Clang
 
