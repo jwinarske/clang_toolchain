@@ -261,7 +261,6 @@ if(BUILD_BINUTILS)
         SOURCE_DIR ${THIRD_PARTY_DIR}/binutils
         UPDATE_COMMAND ""
         CONFIGURE_COMMAND
-            PATH=${LLVM_BIN_DIR}:$ENV{PATH}
             ${THIRD_PARTY_DIR}/binutils/configure
                 --prefix=${TOOLCHAIN_DIR}
                 --target=${TARGET_TRIPLE}
