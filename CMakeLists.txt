@@ -75,11 +75,11 @@ if(NOT LLVM_TARGETS_TO_BUILD)
 endif()
 
 if(NOT LLVM_VERSION)
-    set(LLVM_VERSION tags/RELEASE_701/final/)
+    set(LLVM_VERSION tags/RELEASE_801/final/)
 endif()
 
 if(NOT LLVM_VER_DIR)
-    set(LLVM_VER_DIR 7.0.1)
+    set(LLVM_VER_DIR 8.0.1)
 endif()
 
 set(LLVM_SRC_DIR ${THIRD_PARTY_DIR}/llvm)
@@ -98,21 +98,21 @@ if(NOT BUILD_PLATFORM_SYSROOT AND RSYNC AND TARGET_HOSTNAME)
 
     MESSAGE(STATUS "Syncing sysroot from '${TARGET_HOSTNAME}'")
 
-    set(TARGET_SYSROOT_RSYNC 
-        mkdir -p ${TARGET_SYSROOT} && cd ${TARGET_SYSROOT} && 
+    set(TARGET_SYSROOT_RSYNC
+        mkdir -p ${TARGET_SYSROOT} && cd ${TARGET_SYSROOT} &&
         rsync -avz
             --exclude=firmware
             --exclude=modules
-            ${TARGET_HOSTNAME}:/lib/ lib/ && 
-        rsync -avz 
+            ${TARGET_HOSTNAME}:/lib/ lib/ &&
+        rsync -avz
             --exclude=lib/chromium-browser/
             --exclude=lib/firefox/
             --exclude=lib/cups/backend/cups-brf # random permission error
             ${TARGET_HOSTNAME}:/usr/ usr/)
 
     if(BUILD_PLATFORM_RPI)
-        set(TARGET_SYSROOT_RSYNC ${TARGET_SYSROOT_RSYNC} && 
-            mkdir -p ${TARGET_SYSROOT}/opt && 
+        set(TARGET_SYSROOT_RSYNC ${TARGET_SYSROOT_RSYNC} &&
+            mkdir -p ${TARGET_SYSROOT}/opt &&
             rsync -avz ${TARGET_HOSTNAME}:/opt/vc opt/)
     endif()
 
@@ -240,12 +240,12 @@ if(BUILD_BINUTILS)
     else()
         set(BINUTILS_TAG binutils-2_31_1)
     endif()
-    
+
     # Clang patch
     if (CMAKE_CXX_COMPILER_ID MATCHES ".*[cC]lang")
         message(STATUS "Patching for Clang")
-        set(BINUTILS_PATCH 
-            git checkout gold/gold-threads.cc && 
+        set(BINUTILS_PATCH
+            git checkout gold/gold-threads.cc &&
             git apply ${CMAKE_SOURCE_DIR}/cmake/patches/binutils/gold.patch)
     else()
         set(BINUTILS_PATCH
@@ -284,7 +284,7 @@ if(BUILD_NEWLIB)
 endif()
 
 if(BUILD_COMPILER_RT)
-    
+
     ExternalProject_Add(compiler-rt
         DOWNLOAD_COMMAND ""
         SOURCE_DIR ${THIRD_PARTY_DIR}/compiler-rt
@@ -345,7 +345,7 @@ if(BUILD_LIBCXXABI)
     endif()
     if(BUILD_SYSROOT)
         add_dependencies(libcxxabi sysroot)
-    endif()        
+    endif()
 endif()
 
 if(BUILD_LIBUNWIND)
@@ -378,7 +378,7 @@ if(BUILD_LIBUNWIND)
     endif()
     if(BUILD_SYSROOT)
         add_dependencies(libunwind sysroot)
-    endif()        
+    endif()
 endif()
 
 if(BUILD_LIBCXX)

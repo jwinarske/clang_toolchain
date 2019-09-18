@@ -33,10 +33,9 @@ Note:  If you don't have a commercial account, your travis build will fail due t
 
 ## Build Example
 
-    mkdir -p ~/git && cd ~/git
     git clone https://github.com/jwinarske/clang_toolchain.git
     cd clang_toolchain && mkdir build && cd build
-    cmake .. -DTARGET_TRIPLE=arm-none-eabi -DTARGET_SYSROOT=/home/joel/sdk/gcc-arm-none-eabi-8-2018-q4-major
+    cmake .. -DBUILD_PLATFORM_RPI=ON -DBUILD_PLATFORM_SYSROOT=ON -DBUILD_MRAA=ON -DSDK_ROOT_DIR=/home/joel/rpi -DTOOLCHAIN_FILE_DIR=/home/joel/rpi/sdk/build/cmake
     make -j$(numproc)
 
 ## Notes
@@ -46,15 +45,15 @@ If you want to force a rebuild of a sub-project, either delete the specific fold
 
 ## Cross compiling for RaspberryPi (armhf raspbian)
 
-#### Build 7.0.1 Toolchain, populate sysroot from target via rsync, and build MRAA
+#### Build 8.0.1 Toolchain, populate sysroot from target via rsync, and build MRAA
     -DLLVM_TARGETS_TO_BUILD="ARM"
     -DBUILD_PLATFORM_RPI=ON
     -DTARGET_HOSTNAME=pi@raspberrypi.local
     -DBUILD_MRAA=ON
 
-#### Build 8.0.0 rc2 Toolchain, create sysroot from official rootfs, build MRAA, and specify sdk folder
-    -DLLVM_VERSION=tags/RELEASE_800/rc2/
-    -DLLVM_VER_DIR=8.0.0
+#### Build 9.0.0 rc2 Toolchain, create sysroot from official rootfs, build MRAA, and specify sdk folder
+    -DLLVM_VERSION=tags/RELEASE_900/rc2/
+    -DLLVM_VER_DIR=9.0.0
     -DBUILD_PLATFORM_RPI=ON
     -DBUILD_PLATFORM_SYSROOT=ON
     -DBUILD_MRAA=ON
@@ -71,7 +70,7 @@ If you want to force a rebuild of a sub-project, either delete the specific fold
 
 ### Cross compiling for AtomicPi (x86_64 lubuntu)
 
-#### Build 7.0.1 Toolchain, populate sysroot from target via rsync, and build MRAA
+#### Build 8.0.1 Toolchain, populate sysroot from target via rsync, and build MRAA
     -DTARGET_ARCH=x86_64
     -DTARGET_TRIPLE=x86_64-linux-gnu
     -DLLVM_TARGETS_TO_BUILD="X86" -DTARGET_HOSTNAME=atomic@atomicpi.local
@@ -85,7 +84,7 @@ If you want to force a rebuild of a sub-project, either delete the specific fold
     -DLLVM_VERSION=tags/RELEASE_800/rc2/
     -DLLVM_VER_DIR=8.0.0
 
-#### Sequence to build 7.0.1 Toolchain, populate sysroot from target, build hello-wayland, push to target, and execute
+#### Sequence to build 8.0.1 Toolchain, populate sysroot from target, build hello-wayland, push to target, and execute
     ssh atomic@atomicpi.local
     sudo apt-get install wayland-protocols libwayland-dev
     exit
