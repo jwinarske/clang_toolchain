@@ -29,13 +29,13 @@ Note:  If you don't have a commercial account, your travis build will fail due t
 
     Alternatively install LLVM/Clang
 
-3.  sysroot generation uses rsync, or ln, tar, and curl.
+3.  sysroot generation uses rsync, or ln, 7z, and curl.
 
-## Build Example
+## Build Example - Build 8.0.1 Toolchain, use sysroot folder in SDK_ROOT_DIR, build MRAA (test)
 
     git clone https://github.com/jwinarske/clang_toolchain.git
     cd clang_toolchain && mkdir build && cd build
-    cmake .. -DBUILD_PLATFORM_RPI=ON -DBUILD_PLATFORM_SYSROOT=ON -DBUILD_MRAA=ON -DSDK_ROOT_DIR=/home/joel/rpi -DTOOLCHAIN_FILE_DIR=/home/joel/rpi/sdk/build/cmake
+    cmake .. -DBUILD_PLATFORM_RPI=ON -DBUILD_PLATFORM_SYSROOT=OFF -DBUILD_MRAA=ON -DSDK_ROOT_DIR=/home/joel/rpi
     make -j$(numproc)
 
 ## Notes

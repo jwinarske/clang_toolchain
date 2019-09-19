@@ -74,6 +74,10 @@ if(NOT LLVM_TARGETS_TO_BUILD)
     set(LLVM_TARGETS_TO_BUILD "X86|ARM|AArch64")
 endif()
 
+if(NOT TARGET_ARCH)
+    set(TARGET_ARCH arm)
+endif()
+
 if(NOT LLVM_VERSION)
     set(LLVM_VERSION tags/RELEASE_801/final/)
 endif()
@@ -148,18 +152,9 @@ else()
     set(TARGET_CXX_FLAGS "-stdlib=libc++")
 endif()
 
-if(BUILD_BINUTILS)
-    set(TARGET_LINKER gold)
-else()
+if(NOT BUILD_BINUTILS)
     set(BUILD_LLD ON)
-    set(TARGET_LINKER lld)
 endif()
-
-set(TARGET_C_LINK_FLAGS   "--rtlib=compiler-rt -fuse-ld=${TARGET_LINKER}")
-set(TARGET_CXX_LINK_FLAGS "--rtlib=compiler-rt -fuse-ld=${TARGET_LINKER} -lc++abi -lunwind")
-
-configure_file(${CMAKE_SOURCE_DIR}/cmake/target.clang.toolchain.cmake.in ${TOOLCHAIN_FILE_DIR}/target.toolchain.cmake @ONLY)
-
 
 #
 # built for host
@@ -175,6 +170,7 @@ if(BUILD_LLD)
     set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
         svn co -q http://llvm.org/svn/llvm-project/lld/${LLVM_VERSION} lld)
     set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|lld")
+    set(TARGET_LINKER lld)
 endif()
 
 if(BUILD_LLDB)
@@ -187,7 +183,12 @@ if(BUILD_COMPILER_RT)
     set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
     svn co -q http://llvm.org/svn/llvm-project/compiler-rt/${LLVM_VERSION} compiler-rt)
     set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|compiler-rt")
+    set(TARGET_C_LINK_FLAGS   "${TARGET_C_LINK_FLAGS} --rtlib=compiler-rt")
+    set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} --rtlib=compiler-rt")
 endif()
+
+set(TARGET_C_LINK_FLAGS   "${TARGET_C_LINK_FLAGS} -fuse-ld=${TARGET_LINKER}")
+set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} -fuse-ld=${TARGET_LINKER}")
 
 if(BUILD_LIBUNWIND)
     set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
@@ -199,6 +200,7 @@ if(BUILD_LIBCXXABI)
     set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
         svn co -q http://llvm.org/svn/llvm-project/libcxxabi/${LLVM_VERSION} libcxxabi)
     set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libcxxabi")
+    set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} -lc++abi")
 endif()
 
 if(BUILD_LIBCXX)
@@ -234,6 +236,8 @@ ExternalProject_Add(clang
 )
 
 if(BUILD_BINUTILS)
+
+    set(TARGET_LINKER gold)
 
     if(${TARGET_TRIPLE} MATCHES "arm-none-eabi")
         set(BINUTILS_TAG users/ARM/embedded-binutils-master-2018q4)
@@ -360,11 +364,11 @@ if(BUILD_LIBUNWIND)
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
-            -DLIBUNWIND_STANDALONE_BUILD=ON
+            -DLIBUNWIND_STANDALONE_BUILD=OFF
             -DLIBUNWIND_TARGET_TRIPLE=${TARGET_TRIPLE}
             -DLIBUNWIND_SYSROOT=${TARGET_SYSROOT}
             -DLIBUNWIND_ENABLE_SHARED=ON
-            -ULIBUNWIND_USE_COMPILER_RT
+            -ULIBUNWIND_USE_COMPILER_RT=${BUILD_COMPILER_RT}
     )
     add_dependencies(libunwind clang)
     if(BUILD_BINUTILS)
@@ -416,6 +420,10 @@ endif()
 #
 # Platform Apps
 #
+
+configure_file(${CMAKE_SOURCE_DIR}/cmake/target.clang.toolchain.cmake.in ${TOOLCHAIN_FILE_DIR}/target.toolchain.cmake @ONLY)
+
+
 if(BUILD_PLATFORM_RPI)
     include(rpi/apps)
 endif()
