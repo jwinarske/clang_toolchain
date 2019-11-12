@@ -79,11 +79,11 @@ if(NOT TARGET_ARCH)
 endif()
 
 if(NOT LLVM_VERSION)
-    set(LLVM_VERSION tags/RELEASE_801/final/)
+    set(LLVM_VERSION tags/RELEASE_900/final/)
 endif()
 
 if(NOT LLVM_VER_DIR)
-    set(LLVM_VER_DIR 8.0.1)
+    set(LLVM_VER_DIR 9.0.0)
 endif()
 
 set(LLVM_SRC_DIR ${THIRD_PARTY_DIR}/llvm)
