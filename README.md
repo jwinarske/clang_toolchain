@@ -12,6 +12,11 @@ These defaults are overridable, for use with other sysroots, such as a Yocto SDK
 
 Tested with GCC (Trusty, Xenial, and Bionic), and Clang (macOS Mojave).  Sysroot install step will fail on Windows native, should work on Cygwin or Mingw.
 
+I will be supporting Windows builds soon.
+
+I also have an upcoming simplified scheme to deal with a foreign sysroot.
+
+
 ## Travis-CI
 
 [![Build Status](https://travis-ci.com/jwinarske/clang_toolchain.svg?branch=master)](https://travis-ci.com/jwinarske/clang_toolchain)
