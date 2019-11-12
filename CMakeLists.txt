@@ -209,6 +209,10 @@ if(BUILD_LIBCXX)
     set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libcxx")
 endif()
 
+if(BUILD_LIBUNWIND)
+    set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} -lunwind")
+endif()
+
 ExternalProject_Add(clang
     DOWNLOAD_COMMAND
         ${CMAKE_COMMAND} -E make_directory ${THIRD_PARTY_DIR} && ${LLVM_CHECKOUT}
