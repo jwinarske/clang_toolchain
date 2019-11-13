@@ -95,56 +95,22 @@ set(LLVM_CONFIG_PATH ${LLVM_BIN_DIR}/llvm-config)
 
 
 #
-# rsync sysroot
+# Sysroot
 #
-find_program(RSYNC rsync)
-if(NOT BUILD_PLATFORM_SYSROOT AND RSYNC AND TARGET_HOSTNAME)
-
-    MESSAGE(STATUS "Syncing sysroot from '${TARGET_HOSTNAME}'")
-
-    set(TARGET_SYSROOT_RSYNC
-        mkdir -p ${TARGET_SYSROOT} && cd ${TARGET_SYSROOT} &&
-        rsync -avz
-            --exclude=firmware
-            --exclude=modules
-            ${TARGET_HOSTNAME}:/lib/ lib/ &&
-        rsync -avz
-            --exclude=lib/chromium-browser/
-            --exclude=lib/firefox/
-            --exclude=lib/cups/backend/cups-brf # random permission error
-            ${TARGET_HOSTNAME}:/usr/ usr/)
-
-    if(BUILD_PLATFORM_RPI)
-        set(TARGET_SYSROOT_RSYNC ${TARGET_SYSROOT_RSYNC} &&
-            mkdir -p ${TARGET_SYSROOT}/opt &&
-            rsync -avz ${TARGET_HOSTNAME}:/opt/vc opt/)
-    endif()
-
-    set(BUILD_SYSROOT ON)
-    ExternalProject_Add(sysroot
-        DOWNLOAD_COMMAND ""
-        UPDATE_COMMAND ${TARGET_SYSROOT_RSYNC}
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ""
-        INSTALL_COMMAND ""
-    )
-endif()
+include(sysroot)
 
 
 #
-# create target toolchain file
+# Package Config
 #
 set(PKG_CONFIG_PATH ${TARGET_SYSROOT}/usr/lib/${TARGET_TRIPLE}/pkgconfig:${TARGET_SYSROOT}/usr/share/pkgconfig)
 
 if(BUILD_PLATFORM_RPI)
     set(PKG_CONFIG_PATH ${PKG_CONFIG_PATH}:${TARGET_SYSROOT}/opt/vc/lib/pkgconfig)
-
-    # baseline sysroot
-    if(BUILD_PLATFORM_SYSROOT)
-        set(BUILD_SYSROOT ON)
-        include(rpi/sysroot)
-    endif()
 endif()
+
+MESSAGE(STATUS "PKG_CONFIG_PATH = ${PKG_CONFIG_PATH}")
+
 
 if(NOT BUILD_LIBCXXABI_EXCEPTIONS)
     set(TARGET_CXX_FLAGS "-stdlib=libc++ -fno-exceptions")
