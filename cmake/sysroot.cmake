@@ -159,7 +159,10 @@ ExternalProject_Add(symlink_fixups
     BUILD_COMMAND ${SYMLINK_FIXUP_SCRIPT} ${TARGET_SYSROOT}
     INSTALL_COMMAND ""
 )
-add_dependencies(symlink_fixups sysroot)
+
+if(BUILD_PLATFORM_SYSROOT OR (RSYNC AND TARGET_HOSTNAME))
+    add_dependencies(symlink_fixups sysroot)
+endif()
 
 
 MESSAGE(STATUS "TARGET_SYSROOT = ${TARGET_SYSROOT}")
