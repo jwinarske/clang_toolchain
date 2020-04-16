@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.15)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "MinSizeRel" CACHE STRING "Choose the type of build, options are: Debug, Release, or MinSizeRel." FORCE)
@@ -78,15 +78,15 @@ if(NOT TARGET_ARCH)
     set(TARGET_ARCH arm)
 endif()
 
-if(NOT LLVM_VERSION)
-    set(LLVM_VERSION tags/RELEASE_900/final/)
+if(NOT LLVM_GIT_TAG)
+    set(LLVM_GIT_TAG llvmorg-10.0.0)
 endif()
 
 if(NOT LLVM_VER_DIR)
-    set(LLVM_VER_DIR 9.0.0)
+    set(LLVM_VER_DIR 10.0.0)
 endif()
 
-set(LLVM_SRC_DIR ${THIRD_PARTY_DIR}/llvm)
+set(LLVM_SRC_DIR ${THIRD_PARTY_DIR}/llvm-project)
 
 
 set(LLVM_BIN_DIR ${TOOLCHAIN_DIR}/bin)
@@ -126,28 +126,26 @@ endif()
 # built for host
 #
 
-set(LLVM_CHECKOUT cd ${THIRD_PARTY_DIR} &&
-    svn co -q http://llvm.org/svn/llvm-project/llvm/${LLVM_VERSION} llvm &&
-    svn co -q http://llvm.org/svn/llvm-project/cfe/${LLVM_VERSION} clang)
-
 set(LLVM_ENABLE_PROJECTS "clang")
 
 if(BUILD_LLD)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
-        svn co -q http://llvm.org/svn/llvm-project/lld/${LLVM_VERSION} lld)
     set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|lld")
     set(TARGET_LINKER lld)
 endif()
 
 if(BUILD_LLDB)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
-        svn co -q http://llvm.org/svn/llvm-project/lldb/${LLVM_VERSION} lldb)
     set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|lldb")
 endif()
 
+if(BUILD_CLANG_TOOLS_EXTRA)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|clang-tools-extra")
+endif()
+
+if(BUILD_PSTL)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|pstl")
+endif()
+
 if(BUILD_COMPILER_RT)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
-    svn co -q http://llvm.org/svn/llvm-project/compiler-rt/${LLVM_VERSION} compiler-rt)
     set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|compiler-rt")
     set(TARGET_C_LINK_FLAGS   "${TARGET_C_LINK_FLAGS} --rtlib=compiler-rt")
     set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} --rtlib=compiler-rt")
@@ -157,32 +155,53 @@ set(TARGET_C_LINK_FLAGS   "${TARGET_C_LINK_FLAGS} -fuse-ld=${TARGET_LINKER}")
 set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} -fuse-ld=${TARGET_LINKER}")
 
 if(BUILD_LIBUNWIND)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
-    svn co -q http://llvm.org/svn/llvm-project/libunwind/${LLVM_VERSION} libunwind)
     set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libunwind")
 endif()
 
 if(BUILD_LIBCXXABI)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
-        svn co -q http://llvm.org/svn/llvm-project/libcxxabi/${LLVM_VERSION} libcxxabi)
     set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libcxxabi")
     set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} -lc++abi")
 endif()
 
 if(BUILD_LIBCXX)
-    set(LLVM_CHECKOUT ${LLVM_CHECKOUT} && cd ${THIRD_PARTY_DIR} &&
-        svn co -q http://llvm.org/svn/llvm-project/libcxx/${LLVM_VERSION} libcxx)
     set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libcxx")
+endif()
+
+if(BUILD_LIBC)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libc")
 endif()
 
 if(BUILD_LIBUNWIND)
     set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} -lunwind")
 endif()
 
-ExternalProject_Add(clang
-    DOWNLOAD_COMMAND
-        ${CMAKE_COMMAND} -E make_directory ${THIRD_PARTY_DIR} && ${LLVM_CHECKOUT}
+if(BUILD_OPENMP)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|openmp")
+endif()
+
+if(BUILD_POLLY)
+    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|polly")
+endif()
+
+ExternalProject_Add(googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.10.0
+    GIT_SHALLOW ON
+    SOURCE_DIR ${THIRD_PARTY_DIR}/googletest
+    UPDATE_COMMAND ""
+    BUILD_IN_SOURCE 0
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
+        -DCMAKE_BUILD_TYPE=MinSizeRel
+        -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
+)
+
+ExternalProject_Add(llvm-project
+    GIT_REPOSITORY https://github.com/llvm/llvm-project
+    GIT_TAG ${LLVM_GIT_TAG}
+    GIT_SHALLOW ON
     SOURCE_DIR ${LLVM_SRC_DIR}
+    SOURCE_SUBDIR llvm
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 0
     LIST_SEPARATOR |
@@ -192,6 +211,8 @@ ExternalProject_Add(clang
         -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
         -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
         -DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD}
+        -DLLVM_USE_HOST_TOOLS=OFF
+        -DLLVM_INCLUDE_UTILS=ON
         -DLLVM_ENABLE_ASSERTIONS=ON
         -DLLVM_BUILD_DOCS=OFF
         -DLLVM_INCLUDE_DOCS=OFF
@@ -202,8 +223,8 @@ ExternalProject_Add(clang
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
         -DLLVM_ENABLE_PROJECTS=${LLVM_ENABLE_PROJECTS}
         -DLLVM_BUILD_RUNTIME=OFF
-        -DLLVM_USE_HOST_TOOLS=ON
 )
+add_dependencies(llvm-project googletest)
 
 if(BUILD_BINUTILS)
 
@@ -212,25 +233,25 @@ if(BUILD_BINUTILS)
     if(${TARGET_TRIPLE} MATCHES "arm-none-eabi")
         set(BINUTILS_TAG users/ARM/embedded-binutils-master-2018q4)
     else()
-        set(BINUTILS_TAG binutils-2_31_1)
+        set(BINUTILS_TAG binutils-2_34)
     endif()
 
     # Clang patch
-    if (CMAKE_CXX_COMPILER_ID MATCHES ".*[cC]lang")
-        message(STATUS "Patching for Clang")
-        set(BINUTILS_PATCH
-            git checkout gold/gold-threads.cc &&
-            git apply ${CMAKE_SOURCE_DIR}/cmake/patches/binutils/gold.patch)
-    else()
-        set(BINUTILS_PATCH
-            git checkout gold/gold-threads.cc)
-    endif()
+#    if (CMAKE_CXX_COMPILER_ID MATCHES ".*[cC]lang")
+#        message(STATUS "Patching for Clang")
+#        set(BINUTILS_PATCH
+#            git checkout gold/gold-threads.cc &&
+#            git apply ${CMAKE_SOURCE_DIR}/cmake/patches/binutils/gold.patch)
+#    else()
+#        set(BINUTILS_PATCH
+#            git checkout gold/gold-threads.cc)
+#    endif()
 
     ExternalProject_Add(binutils
         GIT_REPOSITORY git://sourceware.org/git/binutils-gdb.git
         GIT_TAG ${BINUTILS_TAG}
         GIT_SHALLOW ON
-        PATCH_COMMAND ${BINUTILS_PATCH}
+ #       PATCH_COMMAND ${BINUTILS_PATCH}
         BUILD_IN_SOURCE 0
         SOURCE_DIR ${THIRD_PARTY_DIR}/binutils
         UPDATE_COMMAND ""
@@ -244,7 +265,7 @@ if(BUILD_BINUTILS)
                 --disable-werror
                 #--enable-64-bit-bfd
     )
-    add_dependencies(binutils clang)
+    add_dependencies(binutils llvm-project)
 endif()
 
 #
@@ -253,7 +274,11 @@ endif()
 
 configure_file(cmake/clang.toolchain.cmake.in ${CMAKE_BINARY_DIR}/toolchain.cmake @ONLY)
 
-if(BUILD_NEWLIB)
+if(BUILD_MUSL_CLIB)
+    include(musl)
+endif()
+
+if(BUILD_NEWLIB_CLIB)
     include(newlib)
 endif()
 
@@ -261,7 +286,8 @@ if(BUILD_COMPILER_RT)
 
     ExternalProject_Add(compiler-rt
         DOWNLOAD_COMMAND ""
-        SOURCE_DIR ${THIRD_PARTY_DIR}/compiler-rt
+        SOURCE_DIR ${LLVM_SRC_DIR}
+        SOURCE_SUBDIR compiler-rt
         BUILD_IN_SOURCE 0
         UPDATE_COMMAND ""
         CMAKE_ARGS
@@ -278,11 +304,11 @@ if(BUILD_COMPILER_RT)
             -DCOMPILER_RT_BUILD_PROFILE=OFF
             -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF # LLVM BUG: for arm-linux-eabihf this flags causes install to be armhf-linux-eabihf
     )
-    add_dependencies(compiler-rt clang)
+    add_dependencies(compiler-rt llvm-project)
     if(BUILD_BINUTILS)
         add_dependencies(compiler-rt binutils)
     endif()
-    if(BUILD_SYSROOT)
+    if(BUILD_PLATFORM_SYSROOT)
         add_dependencies(compiler-rt sysroot)
     endif()
 
@@ -291,7 +317,8 @@ endif()
 if(BUILD_LIBCXXABI)
     ExternalProject_Add(libcxxabi
         DOWNLOAD_COMMAND ""
-        SOURCE_DIR ${THIRD_PARTY_DIR}/libcxxabi
+        SOURCE_DIR ${LLVM_SRC_DIR}
+        SOURCE_SUBDIR libcxxabi
         BUILD_IN_SOURCE 0
         UPDATE_COMMAND ""
         CMAKE_ARGS
@@ -310,14 +337,14 @@ if(BUILD_LIBCXXABI)
             -DLIBCXXABI_ENABLE_ASSERTIONS=${BUILD_LIBCXXABI_ASSERTIONS}
             -DLIBCXXABI_ENABLE_PEDANTIC=ON
     )
-    add_dependencies(libcxxabi clang)
+    add_dependencies(libcxxabi llvm-project)
     if(BUILD_BINUTILS)
         add_dependencies(libcxxabi binutils)
     endif()
     if(BUILD_COMPILER_RT)
         add_dependencies(libcxxabi compiler-rt)
     endif()
-    if(BUILD_SYSROOT)
+    if(BUILD_PLATFORM_SYSROOT)
         add_dependencies(libcxxabi sysroot)
     endif()
 endif()
@@ -325,7 +352,8 @@ endif()
 if(BUILD_LIBUNWIND)
     ExternalProject_Add(libunwind
         DOWNLOAD_COMMAND ""
-        SOURCE_DIR ${THIRD_PARTY_DIR}/libunwind
+        SOURCE_DIR ${LLVM_SRC_DIR}
+        SOURCE_SUBDIR libunwind
         BUILD_IN_SOURCE 0
         UPDATE_COMMAND ""
         CMAKE_ARGS
@@ -340,7 +368,7 @@ if(BUILD_LIBUNWIND)
             -DLIBUNWIND_ENABLE_SHARED=ON
             -ULIBUNWIND_USE_COMPILER_RT=${BUILD_COMPILER_RT}
     )
-    add_dependencies(libunwind clang)
+    add_dependencies(libunwind llvm-project)
     if(BUILD_BINUTILS)
         add_dependencies(libunwind binutils)
     endif()
@@ -350,7 +378,7 @@ if(BUILD_LIBUNWIND)
     if(BUILD_LIBCXXABI AND BUILD_LIBUNWIND)
         add_dependencies(libcxxabi libunwind)
     endif()
-    if(BUILD_SYSROOT)
+    if(BUILD_PLATFORM_SYSROOT)
         add_dependencies(libunwind sysroot)
     endif()
 endif()
@@ -358,7 +386,8 @@ endif()
 if(BUILD_LIBCXX)
     ExternalProject_Add(libcxx
         DOWNLOAD_COMMAND ""
-        SOURCE_DIR ${THIRD_PARTY_DIR}/libcxx
+        SOURCE_DIR ${LLVM_SRC_DIR}
+        SOURCE_SUBDIR libcxx
         BUILD_IN_SOURCE 0
         UPDATE_COMMAND ""
         CMAKE_ARGS
@@ -382,7 +411,7 @@ if(BUILD_LIBCXX)
    if(BUILD_COMPILER_RT)
         add_dependencies(libcxx compiler-rt)
     endif()
-    if(BUILD_SYSROOT)
+    if(BUILD_PLATFORM_SYSROOT)
         add_dependencies(libcxx sysroot)
     endif()
 endif()
@@ -427,7 +456,7 @@ if(BUILD_MRAA AND BUILD_LIBCXXABI AND BUILD_LIBCXX)
     if(BUILD_BINUTILS)
         add_dependencies(mraa binutils)
     endif()
-    if(BUILD_SYSROOT)
+    if(BUILD_PLATFORM_SYSROOT)
         add_dependencies(mraa sysroot)
     endif()
 endif()

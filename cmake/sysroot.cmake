@@ -32,10 +32,6 @@ find_program(RSYNC rsync)
 #
 if(BUILD_PLATFORM_SYSROOT)
 
-    if(NOT TARGET_SYSROOT)
-        set(TARGET_SYSROOT ${CMAKE_SOURCE_DIR}/sdk/sysroot)
-    endif()
-
     if(BUILD_PLATFORM_RPI)
 
         if(NOT ROOTFS_ARCHIVE_BASE_URL)
@@ -69,7 +65,7 @@ if(BUILD_PLATFORM_SYSROOT)
     ExternalProject_Add(sysroot
         URL ${ROOTFS_ARCHIVE_URL}
         URL_MD5 ${ROOTFS_ARCHIVE_MD5}
-        DOWNLOAD_NO_EXTRACT true
+        DOWNLOAD_NO_EXTRACT ON
         PATCH_COMMAND ${CMAKE_COMMAND} -E make_directory ${TARGET_SYSROOT}
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
@@ -154,7 +150,8 @@ find_program(chmod REQUIRED)
 set(SYMLINK_FIXUP_SCRIPT ${CMAKE_BINARY_DIR}/symlink_fixups-prefix/src/sysroot-relativelinks.py)
 ExternalProject_Add(symlink_fixups
     URL https://raw.githubusercontent.com/Kukkimonsuta/rpi-buildqt/master/scripts/utils/sysroot-relativelinks.py
-    DOWNLOAD_NO_EXTRACT true
+    URL_HASH MD5=d9eb93ccb6fcb1f9778fd7aaa845c667
+    DOWNLOAD_NO_EXTRACT ON
     CONFIGURE_COMMAND chmod +x ${SYMLINK_FIXUP_SCRIPT}
     BUILD_COMMAND ${SYMLINK_FIXUP_SCRIPT} ${TARGET_SYSROOT}
     INSTALL_COMMAND ""
