@@ -22,22 +22,25 @@
 # SOFTWARE.
 #
 
+set(MUSL_CONFIG "--with-arch=armv7-a --with-fpu=vfpv3-d16")
+#set(MUSL_CONFIG "--with-arch=armv6k --with-fpu=vfpv2")
+
 ExternalProject_Add(musl
-    GIT_REPOSITORY https://git.musl-libc.org/cgit/musl
+    GIT_REPOSITORY git://git.musl-libc.org/musl
     GIT_TAG v1.2.0
     GIT_SHALLOW ON
     BUILD_IN_SOURCE 0
     SOURCE_DIR ${THIRD_PARTY_DIR}/musl
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND
-        CC_FOR_TARGET=${LLVM_BIN_DIR}/clang
-        CFLAGS_FOR_TARGET=-ffreestanding
-        AS_FOR_TARGET=${LLVM_BIN_DIR}/llvm-as
-        LD_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ld.lld
-        AR_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ar
-        RANLIB_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ranlib
-        NM_FOR_TARGET=${LLVM_BIN_DIR}/llvm-nm
+        CC=${LLVM_BIN_DIR}/clang
+        AS=${LLVM_BIN_DIR}/llvm-as
+        LD=${LLVM_BIN_DIR}/llvm-ld.lld
+        AR=${LLVM_BIN_DIR}/llvm-ar
+        RANLIB=${LLVM_BIN_DIR}/llvm-ranlib
+        NM=${LLVM_BIN_DIR}/llvm-nm
         ${THIRD_PARTY_DIR}/musl/configure
+            -static
             --prefix=${TOOLCHAIN_DIR}
             --target=${TARGET_TRIPLE}
             ${MUSL_CONFIG}

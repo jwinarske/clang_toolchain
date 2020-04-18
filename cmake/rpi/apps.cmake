@@ -37,6 +37,7 @@ if(BUILD_PLATFORM_RPI_USERLAND)
             -DCMAKE_INSTALL_PREFIX=${TARGET_SYSROOT}
             -DVMCS_INSTALL_PREFIX=${TARGET_SYSROOT}/opt/vc
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
     )
     if(BUILD_BINUTILS)
@@ -48,7 +49,7 @@ if(BUILD_PLATFORM_RPI_USERLAND)
 
 endif()
 
-option(BUILD_PLATFORM_RPI_HELLO "Build the apps in {sysroot}/opt/vc/src/hello_pi" ON)
+option(BUILD_PLATFORM_RPI_HELLO "Build the apps in {sysroot}/opt/vc/src/hello_pi" OFF)
 if(BUILD_PLATFORM_RPI_HELLO)
 
     # These are C apps...
@@ -65,6 +66,7 @@ if(BUILD_PLATFORM_RPI_HELLO)
             -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/target
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
+            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
     )
     if(BUILD_BINUTILS)
         add_dependencies(rpi_hello binutils)

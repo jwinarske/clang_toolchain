@@ -118,83 +118,27 @@ else()
     set(TARGET_CXX_FLAGS "-stdlib=libc++")
 endif()
 
-if(NOT BUILD_BINUTILS)
-    set(BUILD_LLD ON)
-endif()
-
-#
-# built for host
-#
-
-set(LLVM_ENABLE_PROJECTS "clang")
-
-if(BUILD_LLD)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|lld")
-    set(TARGET_LINKER lld)
-endif()
-
-if(BUILD_LLDB)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|lldb")
-endif()
-
-if(BUILD_CLANG_TOOLS_EXTRA)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|clang-tools-extra")
-endif()
-
-if(BUILD_PSTL)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|pstl")
-endif()
 
 if(BUILD_COMPILER_RT)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|compiler-rt")
     set(TARGET_C_LINK_FLAGS   "${TARGET_C_LINK_FLAGS} --rtlib=compiler-rt")
     set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} --rtlib=compiler-rt")
 endif()
 
+if(NOT BUILD_BINUTILS)
+    set(BUILD_LLD ON)
+endif()
+
+if(BUILD_LLD)
+    set(TARGET_LINKER lld)
+elseif(BUILD_BINUTILS)
+    set(TARGET_LINKER gold)
+endif()
 set(TARGET_C_LINK_FLAGS   "${TARGET_C_LINK_FLAGS} -fuse-ld=${TARGET_LINKER}")
 set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} -fuse-ld=${TARGET_LINKER}")
 
-if(BUILD_LIBUNWIND)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libunwind")
-endif()
-
-if(BUILD_LIBCXXABI)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libcxxabi")
-    set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} -lc++abi")
-endif()
-
-if(BUILD_LIBCXX)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libcxx")
-endif()
-
-if(BUILD_LIBC)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libc")
-endif()
-
-if(BUILD_LIBUNWIND)
-    set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} -lunwind")
-endif()
-
-if(BUILD_OPENMP)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|openmp")
-endif()
-
-if(BUILD_POLLY)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|polly")
-endif()
-
-ExternalProject_Add(googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG release-1.10.0
-    GIT_SHALLOW ON
-    SOURCE_DIR ${THIRD_PARTY_DIR}/googletest
-    UPDATE_COMMAND ""
-    BUILD_IN_SOURCE 0
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
-        -DCMAKE_BUILD_TYPE=MinSizeRel
-        -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-)
+#
+# built for host
+#
 
 ExternalProject_Add(llvm-project
     GIT_REPOSITORY https://github.com/llvm/llvm-project
@@ -224,11 +168,8 @@ ExternalProject_Add(llvm-project
         -DLLVM_ENABLE_PROJECTS=${LLVM_ENABLE_PROJECTS}
         -DLLVM_BUILD_RUNTIME=OFF
 )
-add_dependencies(llvm-project googletest)
 
 if(BUILD_BINUTILS)
-
-    set(TARGET_LINKER gold)
 
     if(${TARGET_TRIPLE} MATCHES "arm-none-eabi")
         set(BINUTILS_TAG users/ARM/embedded-binutils-master-2018q4)
@@ -236,22 +177,10 @@ if(BUILD_BINUTILS)
         set(BINUTILS_TAG binutils-2_34)
     endif()
 
-    # Clang patch
-#    if (CMAKE_CXX_COMPILER_ID MATCHES ".*[cC]lang")
-#        message(STATUS "Patching for Clang")
-#        set(BINUTILS_PATCH
-#            git checkout gold/gold-threads.cc &&
-#            git apply ${CMAKE_SOURCE_DIR}/cmake/patches/binutils/gold.patch)
-#    else()
-#        set(BINUTILS_PATCH
-#            git checkout gold/gold-threads.cc)
-#    endif()
-
     ExternalProject_Add(binutils
         GIT_REPOSITORY git://sourceware.org/git/binutils-gdb.git
         GIT_TAG ${BINUTILS_TAG}
         GIT_SHALLOW ON
- #       PATCH_COMMAND ${BINUTILS_PATCH}
         BUILD_IN_SOURCE 0
         SOURCE_DIR ${THIRD_PARTY_DIR}/binutils
         UPDATE_COMMAND ""
@@ -282,6 +211,55 @@ if(BUILD_NEWLIB_CLIB)
     include(newlib)
 endif()
 
+if(BUILD_LIBC)
+    ExternalProject_Add(libc
+        DOWNLOAD_COMMAND ""
+        SOURCE_DIR ${LLVM_SRC_DIR}
+        SOURCE_SUBDIR libc
+        BUILD_IN_SOURCE 0
+        UPDATE_COMMAND ""
+        CMAKE_ARGS
+            -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
+            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
+            -DLLVM_PATH=${LLVM_BIN_DIR}
+            -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
+    )
+    if(BUILD_BINUTILS)
+        add_dependencies(libc binutils)
+    endif()
+endif()
+
+if(BUILD_LIBUNWIND)
+    ExternalProject_Add(libunwind
+        DOWNLOAD_COMMAND ""
+        SOURCE_DIR ${LLVM_SRC_DIR}
+        SOURCE_SUBDIR libunwind
+        BUILD_IN_SOURCE 0
+        UPDATE_COMMAND ""
+        CMAKE_ARGS
+            -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
+            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
+            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
+            -DLIBUNWIND_STANDALONE_BUILD=ON
+            -DLLVM_PATH=${LLVM_BIN_DIR}
+            -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
+            -DLIBUNWIND_TARGET_TRIPLE=${TARGET_TRIPLE}
+            -DLIBUNWIND_SYSROOT=${TARGET_SYSROOT}
+            -DLIBUNWIND_ENABLE_SHARED=ON
+    )
+    add_dependencies(libunwind llvm-project)
+    if(BUILD_BINUTILS)
+        add_dependencies(libunwind binutils)
+    endif()
+    if(BUILD_PLATFORM_SYSROOT)
+        add_dependencies(libunwind sysroot)
+    endif()
+endif()
+
 if(BUILD_COMPILER_RT)
 
     ExternalProject_Add(compiler-rt
@@ -296,13 +274,8 @@ if(BUILD_COMPILER_RT)
             -DCMAKE_BUILD_TYPE=MinSizeRel
             -DCMAKE_VERBOSE_MAKEFILE=ON
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
-            -DCOMPILER_RT_HAS_FPIC_FLAG=ON
-            -DCOMPILER_RT_BUILD_BUILTINS=ON
-            -DCOMPILER_RT_BUILD_SANITIZERS=ON
-            -DCOMPILER_RT_BUILD_XRAY=ON
-            -DCOMPILER_RT_BUILD_LIBFUZZER=OFF
-            -DCOMPILER_RT_BUILD_PROFILE=OFF
-            -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF # LLVM BUG: for arm-linux-eabihf this flags causes install to be armhf-linux-eabihf
+            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
+            -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
     )
     add_dependencies(compiler-rt llvm-project)
     if(BUILD_BINUTILS)
@@ -323,19 +296,18 @@ if(BUILD_LIBCXXABI)
         UPDATE_COMMAND ""
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
-            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
+            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
+            -DLLVM_PATH=${LLVM_SRC_DIR}/llvm
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
-            -DLIBCXXABI_SYSROOT=${TARGET_SYSROOT}
+            -DLIBCXXABI_STANDALONE_BUILD=OFF
+            -DLIBCXXABI_LIBCXX_PATH=${LLVM_SRC_DIR}/libcxx/include
             -DLIBCXXABI_TARGET_TRIPLE=${TARGET_TRIPLE}
-            -DLIBCXXABI_ENABLE_SHARED=ON
+            -DLIBCXXABI_SYSROOT=${TARGET_SYSROOT}
             -DLIBCXXABI_USE_COMPILER_RT=${BUILD_COMPILER_RT}
-            -DLIBCXXABI_USE_LLVM_UNWINDER=${BUILD_LIBUNWIND}
-            -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${BUILD_LIBUNWIND}
-            -DLIBCXXABI_ENABLE_EXCEPTIONS=${BUILD_LIBCXXABI_EXCEPTIONS}
-            -DLIBCXXABI_ENABLE_ASSERTIONS=${BUILD_LIBCXXABI_ASSERTIONS}
-            -DLIBCXXABI_ENABLE_PEDANTIC=ON
+            -DLIBCXXABI_INCLUDE_TESTS=ON
     )
     add_dependencies(libcxxabi llvm-project)
     if(BUILD_BINUTILS)
@@ -344,42 +316,11 @@ if(BUILD_LIBCXXABI)
     if(BUILD_COMPILER_RT)
         add_dependencies(libcxxabi compiler-rt)
     endif()
-    if(BUILD_PLATFORM_SYSROOT)
-        add_dependencies(libcxxabi sysroot)
-    endif()
-endif()
-
-if(BUILD_LIBUNWIND)
-    ExternalProject_Add(libunwind
-        DOWNLOAD_COMMAND ""
-        SOURCE_DIR ${LLVM_SRC_DIR}
-        SOURCE_SUBDIR libunwind
-        BUILD_IN_SOURCE 0
-        UPDATE_COMMAND ""
-        CMAKE_ARGS
-            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
-            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-            -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-            -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
-            -DLIBUNWIND_STANDALONE_BUILD=OFF
-            -DLIBUNWIND_TARGET_TRIPLE=${TARGET_TRIPLE}
-            -DLIBUNWIND_SYSROOT=${TARGET_SYSROOT}
-            -DLIBUNWIND_ENABLE_SHARED=ON
-            -ULIBUNWIND_USE_COMPILER_RT=${BUILD_COMPILER_RT}
-    )
-    add_dependencies(libunwind llvm-project)
-    if(BUILD_BINUTILS)
-        add_dependencies(libunwind binutils)
-    endif()
-    if(BUILD_COMPILER_RT)
-        add_dependencies(libunwind compiler-rt)
-    endif()
-    if(BUILD_LIBCXXABI AND BUILD_LIBUNWIND)
+    if(BUILD_LIBUNWIND)
         add_dependencies(libcxxabi libunwind)
     endif()
     if(BUILD_PLATFORM_SYSROOT)
-        add_dependencies(libunwind sysroot)
+        add_dependencies(libcxxabi sysroot)
     endif()
 endif()
 
@@ -395,16 +336,18 @@ if(BUILD_LIBCXX)
             -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
+            -DLLVM_PATH=${LLVM_SRC_DIR}/llvm
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
             -DLIBCXX_STANDALONE_BUILD=OFF
             -DLIBCXX_SYSROOT=${TARGET_SYSROOT}
             -DLIBCXX_TARGET_TRIPLE=${TARGET_TRIPLE}
             -DLIBCXX_USE_COMPILER_RT=${BUILD_COMPILER_RT}
-            -DLIBCXX_ENABLE_SHARED=ON
-            -DLIBCXXABI_USE_LLVM_UNWINDER=${BUILD_LIBUNWIND}
-            -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${BUILD_LIBUNWIND}
+            -DCMAKE_MODULE_LINKER_FLAGS=-L${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
+            -DLIBCXX_INCLUDE_TESTS=ON
+            -DLIBCXX_ENABLE_PARALLEL_ALGORITHMS=OFF
+            -DLIBCXX_HAS_MUSL_LIBC=${BUILD_MUSL_CLIB}
     )
-    add_dependencies(libcxx libcxxabi)
+#    add_dependencies(libcxx libcxxabi)
     if(BUILD_BINUTILS)
         add_dependencies(libcxx binutils)
     endif()
@@ -434,7 +377,7 @@ endif()
 #
 # Common
 #
-if(BUILD_MRAA AND BUILD_LIBCXXABI AND BUILD_LIBCXX)
+if(BUILD_MRAA AND BUILD_LIBCXX)
     ExternalProject_Add(mraa
         GIT_REPOSITORY https://github.com/intel-iot-devkit/mraa.git
         GIT_TAG master
@@ -452,7 +395,7 @@ if(BUILD_MRAA AND BUILD_LIBCXXABI AND BUILD_LIBCXX)
             -DJSONPLAT=OFF
             -DBUILDTESTS=OFF
     )
-    add_dependencies(mraa libcxxabi libcxx)
+    add_dependencies(mraa libcxx)
     if(BUILD_BINUTILS)
         add_dependencies(mraa binutils)
     endif()
