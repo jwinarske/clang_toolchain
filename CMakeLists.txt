@@ -106,7 +106,10 @@ endif()
 MESSAGE(STATUS "PKG_CONFIG_PATH = ${PKG_CONFIG_PATH}")
 
 SET(TARGET_MARCH armv7a)
-SET(TARGET_CONFIG -march=${TARGET_MARCH}) # --with-float=${TARGET_FLOAT} --with-fpu=${TARGET_FPU})
+
+SET(TARGET_CONFIG "-march=${TARGET_MARCH}") # --with-float=${TARGET_FLOAT} --with-fpu=${TARGET_FPU})
+SET(TARGET_CXX_FLAGS_TOOLS  "-I{THIRD_PARTY_DIR}/llvm-project/libcxx/include ${TARGET_CONFIG}")
+SET(TARGET_LINKER_FLAGS "-v -fuse-ld=lld")
 
 if(NOT BUILD_LIBCXXABI_EXCEPTIONS)
     set(TARGET_CXX_FLAGS "-stdlib=libc++ -fno-exceptions")
