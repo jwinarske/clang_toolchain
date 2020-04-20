@@ -71,7 +71,7 @@ if(NOT TARGET_TRIPLE)
 endif()
 
 if(NOT LLVM_TARGETS_TO_BUILD)
-    set(LLVM_TARGETS_TO_BUILD "X86|ARM|AArch64")
+    set(LLVM_TARGETS_TO_BUILD X86|ARM|AArch64)
 endif()
 
 if(NOT TARGET_ARCH)
@@ -95,12 +95,6 @@ set(LLVM_CONFIG_PATH ${LLVM_BIN_DIR}/llvm-config)
 
 
 #
-# Sysroot
-#
-include(sysroot)
-
-
-#
 # Package Config
 #
 set(PKG_CONFIG_PATH ${TARGET_SYSROOT}/usr/lib/${TARGET_TRIPLE}/pkgconfig:${TARGET_SYSROOT}/usr/share/pkgconfig)
@@ -111,6 +105,8 @@ endif()
 
 MESSAGE(STATUS "PKG_CONFIG_PATH = ${PKG_CONFIG_PATH}")
 
+SET(TARGET_MARCH armv7a)
+SET(TARGET_CONFIG -march=${TARGET_MARCH}) # --with-float=${TARGET_FLOAT} --with-fpu=${TARGET_FPU})
 
 if(NOT BUILD_LIBCXXABI_EXCEPTIONS)
     set(TARGET_CXX_FLAGS "-stdlib=libc++ -fno-exceptions")
@@ -119,10 +115,10 @@ else()
 endif()
 
 
-if(BUILD_COMPILER_RT)
-    set(TARGET_C_LINK_FLAGS   "${TARGET_C_LINK_FLAGS} --rtlib=compiler-rt")
-    set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} --rtlib=compiler-rt")
-endif()
+#if(BUILD_COMPILER_RT)
+set(TARGET_C_LINK_FLAGS   "${TARGET_C_LINK_FLAGS} --rtlib=compiler-rt")
+set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} --rtlib=compiler-rt")
+#endif()
 
 if(NOT BUILD_BINUTILS)
     set(BUILD_LLD ON)
@@ -136,72 +132,35 @@ endif()
 set(TARGET_C_LINK_FLAGS   "${TARGET_C_LINK_FLAGS} -fuse-ld=${TARGET_LINKER}")
 set(TARGET_CXX_LINK_FLAGS "${TARGET_CXX_LINK_FLAGS} -fuse-ld=${TARGET_LINKER}")
 
-#
-# built for host
-#
-
-ExternalProject_Add(llvm-project
-    GIT_REPOSITORY https://github.com/llvm/llvm-project
-    GIT_TAG ${LLVM_GIT_TAG}
-    GIT_SHALLOW ON
-    SOURCE_DIR ${LLVM_SRC_DIR}
-    SOURCE_SUBDIR llvm
-    UPDATE_COMMAND ""
-    BUILD_IN_SOURCE 0
-    LIST_SEPARATOR |
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
-        -DCMAKE_BUILD_TYPE=MinSizeRel
-        -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-        -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
-        -DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD}
-        -DLLVM_USE_HOST_TOOLS=OFF
-        -DLLVM_INCLUDE_UTILS=ON
-        -DLLVM_ENABLE_ASSERTIONS=ON
-        -DLLVM_BUILD_DOCS=OFF
-        -DLLVM_INCLUDE_DOCS=OFF
-        -DLLVM_ENABLE_DOXYGEN=OFF
-        -DLLVM_ENABLE_SPHINX=OFF
-        -DLLVM_ENABLE_OCAMLDOC=OFF
-        -DLLVM_ENABLE_BINDINGS=OFF
-        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
-        -DLLVM_ENABLE_PROJECTS=${LLVM_ENABLE_PROJECTS}
-        -DLLVM_BUILD_RUNTIME=OFF
-)
-
-if(BUILD_BINUTILS)
-
-    if(${TARGET_TRIPLE} MATCHES "arm-none-eabi")
-        set(BINUTILS_TAG users/ARM/embedded-binutils-master-2018q4)
-    else()
-        set(BINUTILS_TAG binutils-2_34)
-    endif()
-
-    ExternalProject_Add(binutils
-        GIT_REPOSITORY git://sourceware.org/git/binutils-gdb.git
-        GIT_TAG ${BINUTILS_TAG}
-        GIT_SHALLOW ON
-        BUILD_IN_SOURCE 0
-        SOURCE_DIR ${THIRD_PARTY_DIR}/binutils
-        UPDATE_COMMAND ""
-        CONFIGURE_COMMAND
-            ${THIRD_PARTY_DIR}/binutils/configure
-                --prefix=${TOOLCHAIN_DIR}
-                --target=${TARGET_TRIPLE}
-                --enable-gold
-                --enable-ld
-                --enable-lto
-                --disable-werror
-                #--enable-64-bit-bfd
-    )
-    add_dependencies(binutils llvm-project)
-endif()
 
 #
-# cross compile for target
+# Base Dependencies
 #
+include(sysroot)
+include(llvm-project)
+
+#
+# Build Flow
+#
+#   Host    |    Target ->
+#  -------      ----------      -----------      -----------      --------      -------------
+# | Clang | -> | Builtins | -> | libunwind | -> | libcxxabi | -> | libcxx | -> | compiler-rt |
+#  -------      ----------      -----------      -----------      --------      -------------
+#
+# 1. Clang is needed for builtins and sanitizers, can skip if you already have a recent Clang.
+# 2. The builtins are the equivalent of libgcc, a static library. These are a small part of compiler-rt that we need to build first.
+# 3. The LLVM unwinder may use builtins from libunwind, needs C++ header from libc++
+# 4. The libc++abi C++ runtime uses the unwinder from LLVM unwind
+# 5. The libc++ C++ standard library uses libc++abi
+# 6. The remainder of compiler-rt includes the sanitizers, which need libc++
+
+include(clang)
+
+include(builtins)
 
 configure_file(cmake/clang.toolchain.cmake.in ${CMAKE_BINARY_DIR}/toolchain.cmake @ONLY)
+
+include(libunwind)
 
 if(BUILD_MUSL_CLIB)
     include(musl)
@@ -227,37 +186,15 @@ if(BUILD_LIBC)
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
     )
     if(BUILD_BINUTILS)
-        add_dependencies(libc binutils)
+#        add_dependencies(libc binutils)
     endif()
 endif()
 
-if(BUILD_LIBUNWIND)
-    ExternalProject_Add(libunwind
-        DOWNLOAD_COMMAND ""
-        SOURCE_DIR ${LLVM_SRC_DIR}
-        SOURCE_SUBDIR libunwind
-        BUILD_IN_SOURCE 0
-        UPDATE_COMMAND ""
-        CMAKE_ARGS
-            -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
-            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
-            -DLIBUNWIND_STANDALONE_BUILD=ON
-            -DLLVM_PATH=${LLVM_BIN_DIR}
-            -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
-            -DLIBUNWIND_TARGET_TRIPLE=${TARGET_TRIPLE}
-            -DLIBUNWIND_SYSROOT=${TARGET_SYSROOT}
-            -DLIBUNWIND_ENABLE_SHARED=ON
-    )
-    add_dependencies(libunwind llvm-project)
-    if(BUILD_BINUTILS)
-        add_dependencies(libunwind binutils)
-    endif()
-    if(BUILD_PLATFORM_SYSROOT)
-        add_dependencies(libunwind sysroot)
-    endif()
+if(BUILD_BINUTILS)
+#        add_dependencies(libunwind binutils)
+endif()
+if(BUILD_PLATFORM_SYSROOT)
+    add_dependencies(libunwind sysroot)
 endif()
 
 if(BUILD_COMPILER_RT)
@@ -277,9 +214,9 @@ if(BUILD_COMPILER_RT)
             -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
             -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
     )
-    add_dependencies(compiler-rt llvm-project)
+    add_dependencies(compiler-rt clang)
     if(BUILD_BINUTILS)
-        add_dependencies(compiler-rt binutils)
+#        add_dependencies(compiler-rt binutils)
     endif()
     if(BUILD_PLATFORM_SYSROOT)
         add_dependencies(compiler-rt sysroot)
@@ -309,7 +246,7 @@ if(BUILD_LIBCXXABI)
             -DLIBCXXABI_USE_COMPILER_RT=${BUILD_COMPILER_RT}
             -DLIBCXXABI_INCLUDE_TESTS=ON
     )
-    add_dependencies(libcxxabi llvm-project)
+    add_dependencies(libcxxabi clang)
     if(BUILD_BINUTILS)
         add_dependencies(libcxxabi binutils)
     endif()
@@ -349,7 +286,7 @@ if(BUILD_LIBCXX)
     )
 #    add_dependencies(libcxx libcxxabi)
     if(BUILD_BINUTILS)
-        add_dependencies(libcxx binutils)
+#        add_dependencies(libcxx binutils)
     endif()
    if(BUILD_COMPILER_RT)
         add_dependencies(libcxx compiler-rt)

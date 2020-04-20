@@ -1,0 +1,20 @@
+
+ExternalProject_Add(libunwind
+    DOWNLOAD_COMMAND ""
+    SOURCE_DIR ${LLVM_SRC_DIR}
+    SOURCE_SUBDIR libunwind
+    BUILD_IN_SOURCE 0
+    UPDATE_COMMAND ""
+    CMAKE_ARGS
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
+        -DCMAKE_INSTALL_PREFIX=${TARGET_SYSROOT}/usr/local
+        -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+        -DCMAKE_BUILD_TYPE=Release
+        -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
+        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+        -DLIBUNWIND_TARGET_TRIPLE=${TARGET_TRIPLE}
+        -DLIBUNWIND_USE_COMPILER_RT=ON
+)
+
+add_dependencies(libunwind builtins)
+
