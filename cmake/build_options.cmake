@@ -33,79 +33,22 @@ option(UPDATE_TARGET "Update Target libraries" OFF)
 #
 # llvm projects
 #
-set(LLVM_ENABLE_PROJECTS "clang")
-
 option(BUILD_CLANG_TOOLS_EXTRA "Build Clang Tools Extra" ON)
-if(BUILD_CLANG_TOOLS_EXTRA)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|clang-tools-extra")
-endif()
-
 option(BUILD_COMPILER_RT "Build compiler-rt" ON)
-if(BUILD_COMPILER_RT)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|compiler-rt")
-endif()
-
 option(BUILD_LIBCLC "Build libclc" ON)
-if(BUILD_LIBCLC)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libclc")
-endif()
-
 option(BUILD_LIBCXX "Build libcxx" ON) # cxxabi is built and linked with libcxx project build
-if(BUILD_LIBCXX)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libcxx")
-endif()
-
 option(BUILD_LIBCXXABI "Build libcxxabi" OFF) # cxxabi is built and linked with libcxx project build
-if(BUILD_LIBCXXABI)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libcxxabi")
-endif()
 option(BUILD_LIBCXXABI_EXCEPTIONS "c++abi Exceptions" OFF)
 option(BUILD_LIBCXXABI_ASSERTIONS "c++abi Assertions" OFF)
-
 option(BUILD_LIBUNWIND "Build libunwind" ON)
-if(BUILD_LIBUNWIND)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libunwind")
-endif()
-
 option(BUILD_LLD "Build lld Linker" ON)
-if(BUILD_LLD)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|lld")
-endif()
-
 option(BUILD_LLDB "Build LLVM Debugger" OFF)
-if(BUILD_LLDB)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|lldb")
-endif()
-
 option(BUILD_LLGO "Build llgo project" OFF)
-if(BUILD_LLGO)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|llgo")
-endif()
-
 option(BUILD_MLIR "Build mlir project" OFF)
-if(BUILD_MLIR)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|mlir")
-endif()
-
 option(BUILD_OPENMP "Build OpenMP support" ON)
-if(BUILD_OPENMP)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|openmp")
-endif()
-
 option(BUILD_PARALLEL_LIBS "Build Parallel Libs supprt" ON)
-if(BUILD_PARALLEL_LIBS)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|parallel-libs")
-endif()
-
 option(BUILD_POLLY "Build Polly supprt" ON)
-if(BUILD_POLLY)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|polly")
-endif()
-
 option(BUILD_PSTL "Build Parallel STL support" ON)
-if(BUILD_PSTL)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|pstl")
-endif()
 
 #
 # Binutils
@@ -117,10 +60,6 @@ option(BUILD_BINUTILS "Download and build binutils for host" ON)
 #
 option(BUILD_MUSL_CLIB "Musl C library" OFF)
 option(BUILD_NEWLIB_CLIB "Newlib C library" OFF)
-option(BUILD_LIBC "Build libc" ON)
-if(BUILD_LIBC)
-    set(LLVM_ENABLE_PROJECTS "${LLVM_ENABLE_PROJECTS}|libc")
-endif()
 
 
 #
