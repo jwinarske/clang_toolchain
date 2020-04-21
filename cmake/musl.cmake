@@ -22,10 +22,7 @@
 # SOFTWARE.
 #
 
-set(MUSL_CONFIG "--with-arch=armv7-a --with-fpu=vfpv3-d16")
-#set(MUSL_CONFIG "--with-arch=armv6k --with-fpu=vfpv2")
-
-ExternalProject_Add(musl
+ExternalProject_Add(bootstrap_builtins
     GIT_REPOSITORY git://git.musl-libc.org/musl
     GIT_TAG v1.2.0
     GIT_SHALLOW ON
@@ -35,20 +32,45 @@ ExternalProject_Add(musl
     CONFIGURE_COMMAND
         CC=${LLVM_BIN_DIR}/clang
         AS=${LLVM_BIN_DIR}/llvm-as
-        LD=${LLVM_BIN_DIR}/llvm-ld.lld
         AR=${LLVM_BIN_DIR}/llvm-ar
         RANLIB=${LLVM_BIN_DIR}/llvm-ranlib
         NM=${LLVM_BIN_DIR}/llvm-nm
+        LDFLAGS=-fuse-ld=lld
         ${THIRD_PARTY_DIR}/musl/configure
-            -static
             --prefix=${TOOLCHAIN_DIR}
             --target=${TARGET_TRIPLE}
-            ${MUSL_CONFIG}
+            --sysroot${TARGET_SYSROOT}
+            --enable-wrapper=clang
+            --disable-gcc-wrapper
+            --disable-static
+            --disable-shared
+            --verbose
 )
-if(BUILD_BINUTILS)
-    add_dependencies(musl binutils)
-endif()
-if(BUILD_COMPILER_RT)
-    add_dependencies(musl compiler-rt)
-endif()
+
+ExternalProject_Add(musl
+    DOWNLOAD_COMMAND ""
+    BUILD_IN_SOURCE 0
+    SOURCE_DIR ${THIRD_PARTY_DIR}/musl
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND
+        CC=${LLVM_BIN_DIR}/clang
+        AS=${LLVM_BIN_DIR}/llvm-as
+        AR=${LLVM_BIN_DIR}/llvm-ar
+        RANLIB=${LLVM_BIN_DIR}/llvm-ranlib
+        NM=${LLVM_BIN_DIR}/llvm-nm
+        LDFLAGS=-fuse-ld=lld
+        ${THIRD_PARTY_DIR}/musl/configure
+            --prefix=${TOOLCHAIN_DIR}
+            --target=${TARGET_TRIPLE}
+            --sysroot${TARGET_SYSROOT}
+            --enable-wrapper=clang
+            --disable-gcc-wrapper
+            --enable-static
+            --enable-shared
+            --verbose
+)
+
+add_dependencies(bootstrap_builtins clang)
+add_dependencies(builtins bootstrap_builtins)
+add_dependencies(musl builtins)
 

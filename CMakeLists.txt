@@ -67,11 +67,11 @@ if(NOT TARGET_SYSROOT)
 endif()
 
 if(NOT TARGET_TRIPLE)
-    set(TARGET_TRIPLE arm-linux-gnueabihf CACHE STRING "Target Triple")
+    set(TARGET_TRIPLE arm-linux-musleabihf CACHE STRING "Target Triple")
 endif()
 
 if(NOT LLVM_TARGETS_TO_BUILD)
-    set(LLVM_TARGETS_TO_BUILD X86|ARM|AArch64)
+    set(LLVM_TARGETS_TO_BUILD ARM)
 endif()
 
 if(NOT TARGET_ARCH)
@@ -106,10 +106,12 @@ endif()
 MESSAGE(STATUS "PKG_CONFIG_PATH = ${PKG_CONFIG_PATH}")
 
 SET(TARGET_MARCH armv7a)
+SET(TARGET_FPU vfpv3-d16)
 
 SET(TARGET_CONFIG "-march=${TARGET_MARCH}") # --with-float=${TARGET_FLOAT} --with-fpu=${TARGET_FPU})
 SET(TARGET_CXX_FLAGS_TOOLS  "-I{THIRD_PARTY_DIR}/llvm-project/libcxx/include ${TARGET_CONFIG}")
 SET(TARGET_LINKER_FLAGS "-v -fuse-ld=lld")
+
 
 if(NOT BUILD_LIBCXXABI_EXCEPTIONS)
     set(TARGET_CXX_FLAGS "-stdlib=libc++ -fno-exceptions")
@@ -146,9 +148,9 @@ include(llvm-project)
 # Build Flow
 #
 #   Host    |    Target ->
-#  -------      ----------      -----------      -----------      --------      -------------
-# | Clang | -> | Builtins | -> | libunwind | -> | libcxxabi | -> | libcxx | -> | compiler-rt |
-#  -------      ----------      -----------      -----------      --------      -------------
+#  -------      -----------      ----------      ------      -----------      -----------      --------      -------------
+# | Clang | -> | musl inst | -> | Builtins | -> | musl | -> | libunwind | -> | libcxxabi | -> | libcxx | -> | compiler-rt |
+#  -------      -----------      ----------      ------      -----------      -----------      --------      -------------
 #
 # 1. Clang is needed for builtins and sanitizers, can skip if you already have a recent Clang.
 # 2. The builtins are the equivalent of libgcc, a static library. These are a small part of compiler-rt that we need to build first.
@@ -173,25 +175,6 @@ if(BUILD_NEWLIB_CLIB)
     include(newlib)
 endif()
 
-if(BUILD_LIBC)
-    ExternalProject_Add(libc
-        DOWNLOAD_COMMAND ""
-        SOURCE_DIR ${LLVM_SRC_DIR}
-        SOURCE_SUBDIR libc
-        BUILD_IN_SOURCE 0
-        UPDATE_COMMAND ""
-        CMAKE_ARGS
-            -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
-            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
-            -DLLVM_PATH=${LLVM_BIN_DIR}
-            -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
-    )
-    if(BUILD_BINUTILS)
-#        add_dependencies(libc binutils)
-    endif()
-endif()
 
 if(BUILD_BINUTILS)
 #        add_dependencies(libunwind binutils)
@@ -202,6 +185,10 @@ endif()
 
 if(BUILD_COMPILER_RT)
 
+    SET(COMPILER_RT_C_FLAGS "${TARGET_CONFIG} -I${TOOLCHAIN_DIR} -I${TARGET_SYSROOT}/usr/include/arm-linux-gnueabihf")
+    SET(COMPILER_RT_CXX_FLAGS "-I${THIRD_PARTY_DIR}/llvm-project/libcxx/include ${TARGET_CONFIG}  -I${TARGET_SYSROOT}/usr/include/arm-linux-gnueabihf")
+    SET(COMPILER_RT_LINKER_FLAGS "-nostdlib -fuse-ld=lld")
+
     ExternalProject_Add(compiler-rt
         DOWNLOAD_COMMAND ""
         SOURCE_DIR ${LLVM_SRC_DIR}
@@ -210,17 +197,22 @@ if(BUILD_COMPILER_RT)
         UPDATE_COMMAND ""
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}
-            -DCMAKE_BUILD_TYPE=MinSizeRel
-            -DCMAKE_VERBOSE_MAKEFILE=ON
+            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
+            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+            -DLLVM_COMPILER_CHECKED=ON
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
-            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
-            -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+            -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF
+            -DCMAKE_ASM_FLAGS=-fno-integrated-as
+            -DCMAKE_C_FLAGS=${COMPILER_RT_C_FLAGS}
+            -DCMAKE_CXX_FLAGS=${COMPILER_RT_CXX_FLAGS}
+            -DCMAKE_SHARED_LINKER_FLAGS=${COMPILER_RT_LINKER_FLAGS}
+
     )
-    add_dependencies(compiler-rt clang)
-    if(BUILD_BINUTILS)
+#    add_dependencies(compiler-rt clang)
+#    if(BUILD_BINUTILS)
 #        add_dependencies(compiler-rt binutils)
-    endif()
+#    endif()
     if(BUILD_PLATFORM_SYSROOT)
         add_dependencies(compiler-rt sysroot)
     endif()
@@ -228,6 +220,11 @@ if(BUILD_COMPILER_RT)
 endif()
 
 if(BUILD_LIBCXXABI)
+
+    SET(LIBCXXABI_C_FLAGS ${TARGET_CONFIG})
+    SET(LIBCXXABI_CXX_FLAGS "-I{THIRD_PARTY_DIR}/llvm-project/libcxx/include ${TARGET_CONFIG} -v")
+    SET(LIBCXXABI_LINKER_FLAGS "-nostdlib -fuse-ld=lld -v")
+
     ExternalProject_Add(libcxxabi
         DOWNLOAD_COMMAND ""
         SOURCE_DIR ${LLVM_SRC_DIR}
@@ -236,29 +233,25 @@ if(BUILD_LIBCXXABI)
         UPDATE_COMMAND ""
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
+            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
+            -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
-            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
+            -DLLVM_COMPILER_CHECKED=ON
             -DLLVM_PATH=${LLVM_SRC_DIR}/llvm
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
+            -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF
             -DLIBCXXABI_STANDALONE_BUILD=OFF
             -DLIBCXXABI_LIBCXX_PATH=${LLVM_SRC_DIR}/libcxx/include
             -DLIBCXXABI_TARGET_TRIPLE=${TARGET_TRIPLE}
             -DLIBCXXABI_SYSROOT=${TARGET_SYSROOT}
-            -DLIBCXXABI_USE_COMPILER_RT=${BUILD_COMPILER_RT}
+            -DLIBCXXABI_USE_COMPILER_RT=ON
             -DLIBCXXABI_INCLUDE_TESTS=ON
+            -DCMAKE_C_FLAGS=${LIBCXXABI_C_FLAGS}
+            -DCMAKE_CXX_FLAGS=${LIBCXXABI_CXX_FLAGS}
+            -DCMAKE_SHARED_LINKER_FLAGS=${LIBCXXABI_LINKER_FLAGS}
     )
     add_dependencies(libcxxabi clang)
-    if(BUILD_BINUTILS)
-        add_dependencies(libcxxabi binutils)
-    endif()
-    if(BUILD_COMPILER_RT)
-        add_dependencies(libcxxabi compiler-rt)
-    endif()
-    if(BUILD_LIBUNWIND)
-        add_dependencies(libcxxabi libunwind)
-    endif()
+    add_dependencies(libcxxabi libunwind)
     if(BUILD_PLATFORM_SYSROOT)
         add_dependencies(libcxxabi sysroot)
     endif()
@@ -273,9 +266,9 @@ if(BUILD_LIBCXX)
         UPDATE_COMMAND ""
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}/lib/clang/${LLVM_VER_DIR}/${TARGET_TRIPLE}
+            -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-            -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
+            -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
             -DLLVM_PATH=${LLVM_SRC_DIR}/llvm
             -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
             -DLIBCXX_STANDALONE_BUILD=OFF
@@ -292,10 +285,10 @@ if(BUILD_LIBCXX)
 #        add_dependencies(libcxx binutils)
     endif()
    if(BUILD_COMPILER_RT)
-        add_dependencies(libcxx compiler-rt)
+#        add_dependencies(libcxx compiler-rt)
     endif()
     if(BUILD_PLATFORM_SYSROOT)
-        add_dependencies(libcxx sysroot)
+ #       add_dependencies(libcxx sysroot)
     endif()
 endif()
 

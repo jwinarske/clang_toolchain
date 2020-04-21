@@ -1,4 +1,6 @@
 
+SET(BUILTINS_CFLAGS "${TARGET_CONFIG} -I ${THIRD_PARTY_DIR}/musl/include -I ${THIRD_PARTY_DIR}/musl/arch/arm")
+
 ExternalProject_Add(builtins
     DOWNLOAD_COMMAND ""
     SOURCE_DIR ${LLVM_SRC_DIR}
@@ -8,10 +10,10 @@ ExternalProject_Add(builtins
     CMAKE_ARGS
         -DCMAKE_BUILD_TYPE=Release
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
-        -DCMAKE_INSTALL_PREFIX=${TARGET_SYSROOT}/usr/local
         -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+        -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
         -DCMAKE_ASM_FLAGS=${TARGET_CONFIG}
-        -DCMAKE_C_FLAGS=${TARGET_CONFIG}
+        -DCMAKE_C_FLAGS=${BUILTINS_CFLAGS}
         -DLLVM_CONFIG_PATH=${LLVM_BIN_DIR}/llvm-config
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
         -DCOMPILER_RT_BUILD_BUILTINS=ON
@@ -21,7 +23,6 @@ ExternalProject_Add(builtins
         -DCOMPILER_RT_BUILD_PROFILE=OFF
         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
 )
-add_dependencies(builtins clang)
 if(BUILD_PLATFORM_SYSROOT)
     add_dependencies(builtins sysroot)
 endif()
