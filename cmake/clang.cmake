@@ -1,4 +1,15 @@
 
+ExternalProject_Add(llvm-project
+    GIT_REPOSITORY https://github.com/llvm/llvm-project
+    GIT_TAG ${LLVM_GIT_TAG}
+    GIT_SHALLOW ON
+    SOURCE_DIR ${LLVM_SRC_DIR}
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+)
+
 ExternalProject_Add(clang
     DOWNLOAD_COMMAND ""
     SOURCE_DIR ${LLVM_SRC_DIR}
@@ -26,3 +37,6 @@ ExternalProject_Add(clang
         -DLLVM_BUILD_RUNTIME=ON
 )
 add_dependencies(clang llvm-project)
+
+configure_file(cmake/clang.toolchain.cmake.in ${CMAKE_BINARY_DIR}/toolchain.cmake @ONLY)
+

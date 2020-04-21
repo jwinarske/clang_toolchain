@@ -65,21 +65,19 @@ ExternalProject_Add(newlib
     SOURCE_DIR ${THIRD_PARTY_DIR}/newlib
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND
-        CC_FOR_TARGET=${LLVM_BIN_DIR}/clang
-        CFLAGS_FOR_TARGET=-ffreestanding
-        AS_FOR_TARGET=${LLVM_BIN_DIR}/llvm-as
-        LD_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ld.lld
-        AR_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ar
-        RANLIB_FOR_TARGET=${LLVM_BIN_DIR}/llvm-ranlib
-        NM_FOR_TARGET=${LLVM_BIN_DIR}/llvm-nm
+        CC=${LLVM_BIN_DIR}/clang
+        AS=${LLVM_BIN_DIR}/llvm-as
+        AR=${LLVM_BIN_DIR}/llvm-ar
+        RANLIB=${LLVM_BIN_DIR}/llvm-ranlib
+        NM=${LLVM_BIN_DIR}/llvm-nm
+        LDFLAGS=-fuse-ld=lld
         ${THIRD_PARTY_DIR}/newlib/configure
             --prefix=${TOOLCHAIN_DIR}
             --target=${TARGET_TRIPLE}
+            --sysroot${TOOLCHAIN_DIR}
+            --enable-wrapper=clang
+            --disable-gcc-wrapper
+            --enable-static
+            --enable-shared
             ${NEWLIB_CONFIG}
 )
-if(BUILD_BINUTILS)
-    add_dependencies(newlib binutils)
-endif()
-if(BUILD_COMPILER_RT)
-    add_dependencies(newlib compiler-rt)
-endif()

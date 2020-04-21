@@ -39,13 +39,13 @@ ExternalProject_Add(bootstrap_builtins
         ${THIRD_PARTY_DIR}/musl/configure
             --prefix=${TOOLCHAIN_DIR}
             --target=${TARGET_TRIPLE}
-            --sysroot${TARGET_SYSROOT}
+            --sysroot${TOOLCHAIN_DIR}
             --enable-wrapper=clang
             --disable-gcc-wrapper
             --disable-static
             --disable-shared
-            --verbose
-)
+            # --verbose
+    )
 
 ExternalProject_Add(musl
     DOWNLOAD_COMMAND ""
@@ -62,15 +62,39 @@ ExternalProject_Add(musl
         ${THIRD_PARTY_DIR}/musl/configure
             --prefix=${TOOLCHAIN_DIR}
             --target=${TARGET_TRIPLE}
-            --sysroot${TARGET_SYSROOT}
+            --sysroot${TOOLCHAIN_DIR}
             --enable-wrapper=clang
             --disable-gcc-wrapper
             --enable-static
             --enable-shared
-            --verbose
-)
+            # --verbose
+    )
 
 add_dependencies(bootstrap_builtins clang)
 add_dependencies(builtins bootstrap_builtins)
 add_dependencies(musl builtins)
 
+SET(RTCXX_C_FLAGS "${TARGET_CONFIG}")
+SET(RTCXX_CXX_FLAGS "${TARGET_CONFIG}")
+SET(RTCXX_LINKER_FLAGS "-nostdlib -stdlib=libc++ -fuse-ld=lld")
+
+ExternalProject_Add(rtcxx
+    GIT_REPOSITORY https://github.com/ckormanyos/real-time-cpp.git
+    GIT_TAG master
+    GIT_SHALLOW ON
+    BUILD_IN_SOURCE 0
+    SOURCE_DIR ${THIRD_PARTY_DIR}/rtcxx
+    SOURCE_SUBDIR ref_app
+    UPDATE_COMMAND ""
+    CMAKE_ARGS
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/toolchain.cmake
+        -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_DIR}
+        -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        -DCMAKE_C_FLAGS=${RTCXX_C_FLAGS}
+        -DCMAKE_CXX_FLAGS=${RTCXX_CXX_FLAGS}
+        -DCMAKE_SHARED_LINKER_FLAGS=${RTCXX_LINKER_FLAGS}
+        -DNAME=linux
+        -DTRIPLE=${TARGET_TRIPLE}
+        -DTARGET=host
+)
